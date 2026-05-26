@@ -19,15 +19,15 @@ enum layers {
 #define QWERTY  PDF(_QWERTY)
 
 // Home-row mods for Vibranium-f home block
-#define HRM_S   LGUI_T(KC_S)
-#define HRM_C   LALT_T(KC_C)
-#define HRM_N   LCTL_T(KC_N)
+#define HRM_S   LALT_T(KC_S)
+#define HRM_C   LCTL_T(KC_C)
+#define HRM_N   LGUI_T(KC_N)
 #define HRM_T   LSFT_T(KC_T)
 
 #define HRM_A   LSFT_T(KC_A)
-#define HRM_E   LCTL_T(KC_E)
-#define HRM_I   LALT_T(KC_I)
-#define HRM_H   LGUI_T(KC_H)
+#define HRM_E   LGUI_T(KC_E)
+#define HRM_I   LCTL_T(KC_I)
+#define HRM_H   LALT_T(KC_H)
 
 // Shortcuts
 #define UNDO    C(KC_Z)
@@ -114,7 +114,6 @@ enum custom_keycodes {
     HD_WH,
     HD_GH,
     HD_PH,
-    SFT_CAPS,
 
     P_HASH_AT,
     P_DOT_COLN,
@@ -148,13 +147,13 @@ enum combo_events {
 };
 
 const uint16_t PROGMEM th_combo[] = {HRM_T, HRM_N, COMBO_END}; // TN -> TH
-const uint16_t PROGMEM ch_combo[] = {HRM_C, HRM_T, COMBO_END}; // CT -> CH
-const uint16_t PROGMEM sh_combo[] = {HRM_S, HRM_N, COMBO_END}; // SN -> SH
+const uint16_t PROGMEM ch_combo[] = {HRM_C, HRM_N, COMBO_END}; // CN -> CH
+const uint16_t PROGMEM sh_combo[] = {HRM_S, HRM_C, COMBO_END}; // SC -> SH
 const uint16_t PROGMEM wh_combo[] = {KC_W,  KC_M,  COMBO_END}; // WM -> WH
 const uint16_t PROGMEM gh_combo[] = {KC_G,  KC_M,  COMBO_END}; // GM -> GH
-const uint16_t PROGMEM ph_combo[] = {KC_F,  KC_D,  COMBO_END}; // FD -> PH
+const uint16_t PROGMEM ph_combo[] = {KC_F,  KC_P,  COMBO_END}; // FP -> PH
 const uint16_t PROGMEM z_combo[]  = {KC_J,  KC_G,  COMBO_END}; // JG -> Z
-const uint16_t PROGMEM qu_combo[] = {KC_G,  KC_P,  COMBO_END}; // GP -> QU, hold -> Q
+const uint16_t PROGMEM qu_combo[] = {HRM_T,  KC_K,  COMBO_END}; // TK -> QU, hold -> Q
 
 combo_t key_combos[] = {
     [C_TH] = COMBO(th_combo, HD_TH),
@@ -194,17 +193,40 @@ bool get_combo_must_tap(uint16_t combo_index, combo_t *combo) {
     }
 }
 
-// GP -> QU, hold long enough -> delete the auto U, leaving Q
+// TK -> QU, hold long enough -> delete the auto U, leaving Q
 static bool     smart_qu_active = false;
 static uint16_t smart_qu_timer  = 0;
 #define SMART_QU_DELETE_TERM 175
+
+static void send_hd_qu(void) {
+    uint8_t mods         = get_mods();
+    uint8_t oneshot_mods = get_oneshot_mods();
+    bool shifted         = (mods | oneshot_mods) & MOD_MASK_SHIFT;
+
+    // Remove Shift temporarily, preserve other modifiers.
+    set_mods(mods & ~MOD_MASK_SHIFT);
+    send_keyboard_report();
+    set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+
+    if (shifted) {
+        tap_code16(S(KC_Q));   // Q
+    } else {
+        tap_code16(KC_Q);      // q
+    }
+
+    tap_code16(KC_U);          // always unshifted u
+
+    // Restore modifier state.
+    set_mods(mods);
+    send_keyboard_report();
+    set_oneshot_mods(oneshot_mods);
+}
 
 void process_combo_event(uint16_t combo_index, bool pressed) {
     switch (combo_index) {
         case C_QU:
             if (pressed) {
-                tap_code(KC_Q);
-                tap_code(KC_U);
+                send_hd_qu();
                 smart_qu_active = true;
                 smart_qu_timer  = timer_read();
             } else {
@@ -216,12 +238,6 @@ void process_combo_event(uint16_t combo_index, bool pressed) {
             break;
     }
 }
-
-// Real Shift key with double-tap Caps Lock
-static bool     sft_caps_pressed      = false;
-static bool     sft_caps_interrupted  = false;
-static bool     sft_caps_tap_pending  = false;
-static uint16_t sft_caps_timer        = 0;
 
 // Startup / wake pulse
 #ifdef RGB_MATRIX_ENABLE
@@ -241,7 +257,7 @@ static void start_activity_pulse(uint8_t hue, uint8_t sat) {
 }
 
 void keyboard_post_init_user(void) {
-    start_activity_pulse(0, 0); // white startup pulse
+    start_activity_pulse(170, 200); // blue startup pulse
 }
 
 void suspend_power_down_user(void) {
@@ -250,7 +266,7 @@ void suspend_power_down_user(void) {
 }
 
 void suspend_wakeup_init_user(void) {
-    start_activity_pulse(85, 255); // green wake pulse
+    start_activity_pulse(0, 0); // white wake pulse
 }
 
 void housekeeping_task_user(void) {
@@ -285,130 +301,129 @@ bool shutdown_user(bool jump_to_bootloader) {
 }
 #endif
 
+static void tap_code16_without_user_shift(uint16_t keycode) {
+    uint8_t mods         = get_mods();
+    uint8_t oneshot_mods = get_oneshot_mods();
+
+    // Remove only Shift; preserve Ctrl/Alt/Gui.
+    set_mods(mods & ~MOD_MASK_SHIFT);
+    set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+    send_keyboard_report();
+
+    tap_code16(keycode);
+
+    // Restore held physical mods.
+    // Do not restore one-shot Shift; this keypress has consumed it.
+    set_mods(mods);
+    set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+    send_keyboard_report();
+}
+
 static inline bool hd_shifted(void) {
     return (get_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT;
 }
 
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    // Cancel pending double-tap Caps Lock sequence when another key intervenes.
-    if (record->event.pressed && keycode != SFT_CAPS) {
-        if (sft_caps_pressed) {
-            sft_caps_interrupted = true;
-        }
-        if (sft_caps_tap_pending) {
-            sft_caps_tap_pending = false;
-        }
+static void send_hd_digraph(uint16_t first, uint16_t second) {
+    uint8_t mods         = get_mods();
+    uint8_t oneshot_mods = get_oneshot_mods();
+    bool shifted         = (mods | oneshot_mods) & MOD_MASK_SHIFT;
+
+    // Remove Shift temporarily, but preserve every other modifier.
+    set_mods(mods & ~MOD_MASK_SHIFT);
+    send_keyboard_report();
+    set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+
+    if (shifted) {
+        tap_code16(S(first));   // uppercase only the first letter
+    } else {
+        tap_code16(first);
     }
 
+    tap_code16(second);         // always unshifted
+
+    // Restore original modifier state.
+    set_mods(mods);
+    send_keyboard_report();
+    set_oneshot_mods(oneshot_mods);
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case HD_TH:
             if (record->event.pressed) {
-                tap_code(KC_T);
-                tap_code(KC_H);
+                send_hd_digraph(KC_T, KC_H);
             }
             return false;
 
         case HD_CH:
             if (record->event.pressed) {
-                tap_code(KC_C);
-                tap_code(KC_H);
+                send_hd_digraph(KC_C, KC_H);
             }
             return false;
 
         case HD_SH:
             if (record->event.pressed) {
-                tap_code(KC_S);
-                tap_code(KC_H);
+                send_hd_digraph(KC_S, KC_H);
             }
             return false;
 
         case HD_WH:
             if (record->event.pressed) {
-                tap_code(KC_W);
-                tap_code(KC_H);
+                send_hd_digraph(KC_W, KC_H);
             }
             return false;
 
         case HD_GH:
             if (record->event.pressed) {
-                tap_code(KC_G);
-                tap_code(KC_H);
+                send_hd_digraph(KC_G, KC_H);
             }
             return false;
 
         case HD_PH:
             if (record->event.pressed) {
-                tap_code(KC_P);
-                tap_code(KC_H);
-            }
-            return false;
-
-        case SFT_CAPS:
-            if (record->event.pressed) {
-                if (sft_caps_tap_pending && timer_elapsed(sft_caps_timer) > TAPPING_TERM) {
-                    sft_caps_tap_pending = false;
-                }
-
-                register_code(KC_LSFT);
-                sft_caps_pressed     = true;
-                sft_caps_interrupted = false;
-            } else {
-                unregister_code(KC_LSFT);
-                sft_caps_pressed = false;
-
-                if (!sft_caps_interrupted) {
-                    if (sft_caps_tap_pending && timer_elapsed(sft_caps_timer) <= TAPPING_TERM) {
-                        tap_code(KC_CAPS);
-                        sft_caps_tap_pending = false;
-                    } else {
-                        sft_caps_tap_pending = true;
-                        sft_caps_timer       = timer_read();
-                    }
-                } else {
-                    sft_caps_tap_pending = false;
-                }
+                send_hd_digraph(KC_P, KC_H);
             }
             return false;
 
         case P_HASH_AT:
             if (record->event.pressed) {
-                tap_code16(hd_shifted() ? S(KC_2)    : S(KC_3));
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_2)    : S(KC_3));
             }
             return false;
 
         case P_DOT_COLN:
             if (record->event.pressed) {
-                tap_code16(hd_shifted() ? S(KC_SCLN) : KC_DOT);
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_SCLN) : KC_DOT);
             }
             return false;
 
         case P_SLSH_ASTR:
             if (record->event.pressed) {
-                tap_code16(hd_shifted() ? S(KC_8)    : KC_SLSH);
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_8)    : KC_SLSH);
             }
             return false;
 
         case P_DQUO_EXLM:
             if (record->event.pressed) {
-                tap_code16(hd_shifted() ? S(KC_1)    : S(KC_QUOT));
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_1)    : S(KC_QUOT));
             }
             return false;
 
         case P_QUOT_QUES:
             if (record->event.pressed) {
-                tap_code16(hd_shifted() ? S(KC_SLSH) : KC_QUOT);
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_SLSH) : KC_QUOT);
             }
             return false;
 
         case P_COMM_SCLN:
             if (record->event.pressed) {
-                tap_code16(hd_shifted() ? S(KC_COMM) : KC_COMM);
+                tap_code16_without_user_shift(hd_shifted() ? KC_SCLN : KC_COMM);
             }
             return false;
 
         case P_MINS_PLUS:
             if (record->event.pressed) {
-                tap_code16(hd_shifted() ? S(KC_EQL)  : KC_MINS);
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_EQL)  : KC_MINS);
             }
             return false;
     }
@@ -421,23 +436,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /*
      * Layer 0 — Vibranium-f + smart Q/Z behavior
      *
-     * X   W   M   G   J      Lang      Enter     #    .    /    "    '
+     * X   W   M   G   J      Lang      Nav       #    .    /    "    '
      * S   C   N   T   K      Sys       Sys       ,    A    E    I    H
      * F   P   L   D   V                          -    U    O    Y    B
      *
-     *            Nav   R   Shift/Caps      Sym   Space   Backspace
+     *            Capslock   R   Nav    Sym   Space   Backspace
      *
      * Smart behavior:
      * - JG -> Z
-     * - GP -> QU
-     * - Hold GP long enough -> Q
-     * - TN/CT/SN/WM/GM/FD -> TH/CH/SH/WH/GH/PH
+     * - TK -> QU
+     * - Hold TK long enough -> Q
+     * - TN/CN/SC/WM/GM/FP -> TH/CH/SH/WH/GH/PH
      */
     [_BASE] = LAYOUT_split_3x5_3_ex2(
-        KC_X,    KC_W,    KC_M,    KC_G,    KC_J,    LANG,        KC_ENT,  P_HASH_AT,   P_DOT_COLN,   P_SLSH_ASTR, P_DQUO_EXLM, P_QUOT_QUES,
+        KC_X,    KC_W,    KC_M,    KC_G,    KC_J,    LANG,        NAV,     P_HASH_AT,   P_DOT_COLN,   P_SLSH_ASTR, P_DQUO_EXLM, P_QUOT_QUES,
         HRM_S,   HRM_C,   HRM_N,   HRM_T,   KC_K,    SYS,         SYS,     P_COMM_SCLN, HRM_A,        HRM_E,       HRM_I,       HRM_H,
         KC_F,    KC_P,    KC_L,    KC_D,    KC_V,                          P_MINS_PLUS, KC_U,         KC_O,        KC_Y,        KC_B,
-                                   NAV,     KC_R,    SFT_CAPS,    SYM,     KC_SPC,      KC_BSPC
+                                   KC_CAPS,     KC_R,    NAV,    SYM,     KC_SPC,      KC_BSPC
     ),
 
     /*
@@ -445,7 +460,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      */
     [_NAV] = LAYOUT_split_3x5_3_ex2(
         UNDO,    CUT,     COPY,    PASTE,   SAVE,    _______,     _______, KC_PGUP, KC_HOME, KC_UP,   KC_END,  KC_DEL,
-        KC_LGUI, KC_LALT, KC_LCTL, KC_LSFT, KC_TAB,  _______,     _______, KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, KC_BSPC,
+        KC_LALT, KC_LCTL, KC_LGUI,  KC_LSFT, KC_TAB,  _______,     _______, KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, KC_BSPC,
         FIND,    S_TAB,   PREVT,   NEXTT,   ALT_TAB,                         KC_INS,  WORD_L,  WORD_R,  C_BSPC,  C_DEL,
                                       _______, _______, _______,     NUM,     KC_ESC,  KC_ENT
     ),
@@ -457,7 +472,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         S(KC_1),   S(KC_2),   S(KC_3),   S(KC_4),   S(KC_5),   _______,     _______, KC_LBRC, KC_RBRC, S(KC_LBRC), S(KC_RBRC), S(KC_BSLS),
         S(KC_6),   S(KC_7),   S(KC_8),   S(KC_EQL), KC_EQL,    _______,     _______, S(KC_9), S(KC_0), S(KC_COMM), S(KC_DOT),  KC_SLSH,
         S(KC_GRV), KC_MINS,   S(KC_MINS), S(KC_SCLN), KC_SCLN,                        KC_GRV,  KC_QUOT, S(KC_QUOT), S(KC_SLSH), KC_BSLS,
-                                          NUM,        KC_BSPC,   KC_ENT,     _______, _______, _______
+                                          _______, _______, NUM,                      _______, _______, _______
     ),
 
     /*
@@ -466,7 +481,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_NUM] = LAYOUT_split_3x5_3_ex2(
         KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   _______,     _______, KC_SLSH, KC_7,    KC_8,    KC_9,    KC_MINS,
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,     _______, S(KC_8), KC_4,    KC_5,    KC_6,    S(KC_EQL),
-        KC_F11,  KC_F12,  KC_EQL,  KC_DOT,  KC_0,                            S(KC_5), KC_1,    KC_2,    KC_3,    KC_ENT,
+        KC_F11,  KC_F12,  KC_0,  KC_DOT,  KC_EQL,                            S(KC_5), KC_1,    KC_2,    KC_3,    KC_0,
                                       _______, _______, _______,     _______, _______, _______
     ),
 
@@ -498,9 +513,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      * Layer 6 — QWERTY rescue
      */
     [_QWERTY] = LAYOUT_split_3x5_3_ex2(
-        KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    LANG,        KC_ENT,  KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,
+        KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    LANG,        NAV,     KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,
         KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    SYS,         SYS,     KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN,
         KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,                            KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH,
-                                      NAV,     KC_SPC,  SFT_CAPS,     SYM,    KC_SPC,  KC_BSPC
+                                      KC_CAPS,     KC_SPC,  NAV,     SYM,    KC_SPC,  KC_BSPC
     )
 };
