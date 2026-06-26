@@ -47,6 +47,9 @@ enum layers {
 #define C_DEL   C(KC_DEL)
 #define C_BSPC  C(KC_BSPC)
 
+#define R_NAV     LT(_NAV, KC_R)
+#define SPC_SYM   LT(_SYM, KC_SPC)
+
 // Unicode map
 enum unicode_names {
     U_AACU, U_AACU_CAP,
@@ -115,11 +118,9 @@ enum custom_keycodes {
     HD_GH,
     HD_PH,
 
-    P_HASH_AT,
     P_DOT_COLN,
-    P_SLSH_ASTR,
-    P_DQUO_EXLM,
-    P_QUOT_QUES,
+    P_SLSH_QUES,
+    P_QUOT_DQUO,
     P_COMM_SCLN,
     P_MINS_PLUS
 };
@@ -385,33 +386,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 
-        case P_HASH_AT:
-            if (record->event.pressed) {
-                tap_code16_without_user_shift(hd_shifted() ? S(KC_2)    : S(KC_3));
-            }
-            return false;
-
         case P_DOT_COLN:
             if (record->event.pressed) {
                 tap_code16_without_user_shift(hd_shifted() ? S(KC_SCLN) : KC_DOT);
-            }
-            return false;
-
-        case P_SLSH_ASTR:
-            if (record->event.pressed) {
-                tap_code16_without_user_shift(hd_shifted() ? S(KC_8)    : KC_SLSH);
-            }
-            return false;
-
-        case P_DQUO_EXLM:
-            if (record->event.pressed) {
-                tap_code16_without_user_shift(hd_shifted() ? S(KC_1)    : S(KC_QUOT));
-            }
-            return false;
-
-        case P_QUOT_QUES:
-            if (record->event.pressed) {
-                tap_code16_without_user_shift(hd_shifted() ? S(KC_SLSH) : KC_QUOT);
             }
             return false;
 
@@ -426,7 +403,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tap_code16_without_user_shift(hd_shifted() ? S(KC_EQL)  : KC_MINS);
             }
             return false;
-    }
+
+        case P_SLSH_QUES:
+            if (record->event.pressed) {
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_SLSH) : KC_SLSH);
+            }
+            return false;
+
+        case P_QUOT_DQUO:
+            if (record->event.pressed) {
+                tap_code16_without_user_shift(hd_shifted() ? S(KC_QUOT) : KC_QUOT);
+            }
+            return false;}
 
     return true;
 }
@@ -434,13 +422,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     /*
-     * Layer 0 — Vibranium-f + smart Q/Z behavior
+     * Layer 0 — Vibranium-f + Vim/terminal-oriented base
      *
-     * X   W   M   G   J      Lang      Nav       #    .    /    "    '
+     * X   W   M   G   J      Lang      Tab       Enter Esc .:   /?   '"
      * S   C   N   T   K      Sys       Sys       ,    A    E    I    H
      * F   P   L   D   V                          -    U    O    Y    B
      *
-     *            Capslock   R   Nav    Sym   Space   Backspace
+     *   Capslock   unused  unused      R/Nav   Space/Sym   Backspace
      *
      * Smart behavior:
      * - JG -> Z
@@ -449,10 +437,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      * - TN/CN/SC/WM/GM/FP -> TH/CH/SH/WH/GH/PH
      */
     [_BASE] = LAYOUT_split_3x5_3_ex2(
-        KC_X,    KC_W,    KC_M,    KC_G,    KC_J,    LANG,        NAV,     P_HASH_AT,   P_DOT_COLN,   P_SLSH_ASTR, P_DQUO_EXLM, P_QUOT_QUES,
+        KC_X,    KC_W,    KC_M,    KC_G,    KC_J,    LANG,        KC_TAB,  KC_ENT,      KC_ESC,       P_DOT_COLN,  P_SLSH_QUES, P_QUOT_DQUO,
         HRM_S,   HRM_C,   HRM_N,   HRM_T,   KC_K,    SYS,         SYS,     P_COMM_SCLN, HRM_A,        HRM_E,       HRM_I,       HRM_H,
         KC_F,    KC_P,    KC_L,    KC_D,    KC_V,                          P_MINS_PLUS, KC_U,         KC_O,        KC_Y,        KC_B,
-                                   KC_CAPS,     KC_R,    NAV,    SYM,     KC_SPC,      KC_BSPC
+                                   KC_CAPS, XXXXXXX, NUM,         R_NAV,     SPC_SYM,      KC_BSPC
     ),
 
     /*
@@ -462,16 +450,22 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         UNDO,    CUT,     COPY,    PASTE,   SAVE,    _______,     _______, KC_PGUP, KC_HOME, KC_UP,   KC_END,  KC_DEL,
         KC_LALT, KC_LCTL, KC_LGUI,  KC_LSFT, KC_TAB,  _______,     _______, KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, KC_BSPC,
         FIND,    S_TAB,   PREVT,   NEXTT,   ALT_TAB,                         KC_INS,  WORD_L,  WORD_R,  C_BSPC,  C_DEL,
-                                      _______, _______, _______,     NUM,     KC_ESC,  KC_ENT
+                                      _______, _______, _______,     _______, _______, _______
     ),
 
     /*
      * Layer 2 — Symbols
+     *
+     * !   @   #   $   %      _____     _____     XXXXX  XXXXX  |   \   XXXXX
+     * ^   &   *   +   =      _____     _____     XXXXX  (      {   [   <
+     * ~   -   _   :   ;                          `      )      }   ]   >
+     *
+     *            _____ _____ Num        _____ _____ _____
      */
     [_SYM] = LAYOUT_split_3x5_3_ex2(
-        S(KC_1),   S(KC_2),   S(KC_3),   S(KC_4),   S(KC_5),   _______,     _______, KC_LBRC, KC_RBRC, S(KC_LBRC), S(KC_RBRC), S(KC_BSLS),
-        S(KC_6),   S(KC_7),   S(KC_8),   S(KC_EQL), KC_EQL,    _______,     _______, S(KC_9), S(KC_0), S(KC_COMM), S(KC_DOT),  KC_SLSH,
-        S(KC_GRV), KC_MINS,   S(KC_MINS), S(KC_SCLN), KC_SCLN,                        KC_GRV,  KC_QUOT, S(KC_QUOT), S(KC_SLSH), KC_BSLS,
+        S(KC_1),   S(KC_2),   S(KC_3),   S(KC_4),   S(KC_5),   _______,     _______, XXXXXXX,    XXXXXXX,    S(KC_BSLS), KC_BSLS,    XXXXXXX,
+        S(KC_6),   S(KC_7),   S(KC_8),   S(KC_EQL), KC_EQL,    _______,     _______, XXXXXXX,    S(KC_9),    S(KC_LBRC), KC_LBRC,    S(KC_COMM),
+        S(KC_GRV), KC_MINS,   S(KC_MINS), S(KC_SCLN), KC_SCLN,                       KC_GRV,     S(KC_0),    S(KC_RBRC), KC_RBRC,    S(KC_DOT),
                                           _______, _______, NUM,                      _______, _______, _______
     ),
 
