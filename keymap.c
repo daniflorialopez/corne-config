@@ -18,6 +18,7 @@ enum layers {
 #define LANG    OSL(_LANG)
 #define SYS     MO(_SYS)
 #define MOUSE   MO(_MOUSE)
+#define MOUSE_TG TG(_MOUSE)
 #define VIBRA   PDF(_BASE)
 #define QWERTY  PDF(_QWERTY)
 
@@ -55,6 +56,7 @@ enum layers {
 #define C_BSPC  C(KC_BSPC)
 
 #define R_NAV     LT(_NAV, KC_R)  // legacy alias, currently unused
+#define REP_NAV   LT(_NAV, KC_F24)
 
 // Thumb and subhome layer-tap keys.
 // Chordal Hold + Flow Tap should make these favor taps during same-hand / fast typing.
@@ -149,7 +151,6 @@ enum custom_keycodes {
     BORING,
     CALM,
     OS_MODE,
-    REP_NAV,
     HD_MAGIC,
     HD_SKIP_MAGIC,
     SEL_WORD,
@@ -186,7 +187,7 @@ const uint16_t PROGMEM wh_combo[] = {KC_W,  KC_M,  COMBO_END}; // WM -> WH
 const uint16_t PROGMEM gh_combo[] = {KC_G,  KC_M,  COMBO_END}; // GM -> GH
 const uint16_t PROGMEM ph_combo[] = {KC_F,  KC_P,  COMBO_END}; // FP -> PH
 const uint16_t PROGMEM z_combo[]  = {KC_J,  KC_G,  COMBO_END}; // JG -> Z
-const uint16_t PROGMEM qu_combo[] = {HRM_T,  KC_K,  COMBO_END}; // TK -> QU, hold -> Q
+const uint16_t PROGMEM qu_combo[] = {HRM_T,  KC_K,  COMBO_END}; // TK -> Q only. Use q + Magic for qu.
 
 combo_t key_combos[] = {
     [C_TH] = COMBO(th_combo, HD_TH),
@@ -196,7 +197,7 @@ combo_t key_combos[] = {
     [C_GH] = COMBO(gh_combo, HD_GH),
     [C_PH] = COMBO(ph_combo, HD_PH),
     [C_Z]  = COMBO(z_combo, KC_Z),
-    [C_QU] = COMBO_ACTION(qu_combo)
+    [C_QU] = COMBO(qu_combo, KC_Q)
 };
 
 uint16_t get_combo_term(uint16_t combo_index, combo_t *combo) {
@@ -209,67 +210,15 @@ uint16_t get_combo_term(uint16_t combo_index, combo_t *combo) {
         case C_GH:
         case C_PH:
         case C_Z:
-            return 55;
         case C_QU:
-            return 70;
+            return 55;
         default:
             return COMBO_TERM;
     }
 }
 
 bool get_combo_must_tap(uint16_t combo_index, combo_t *combo) {
-    switch (combo_index) {
-        case C_QU:
-            return false; // we need hold behavior here
-        default:
-            return true;  // all other smart combos are tap-only
-    }
-}
-
-// TK -> QU, hold long enough -> delete the auto U, leaving Q
-static bool     smart_qu_active = false;
-static uint16_t smart_qu_timer  = 0;
-#define SMART_QU_DELETE_TERM 175
-
-static void send_hd_qu(void) {
-    uint8_t mods         = get_mods();
-    uint8_t oneshot_mods = get_oneshot_mods();
-    bool shifted         = (mods | oneshot_mods) & MOD_MASK_SHIFT;
-
-    // Remove Shift temporarily, preserve other modifiers.
-    set_mods(mods & ~MOD_MASK_SHIFT);
-    send_keyboard_report();
-    set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
-
-    if (shifted) {
-        tap_code16(S(KC_Q));   // Q
-    } else {
-        tap_code16(KC_Q);      // q
-    }
-
-    tap_code16(KC_U);          // always unshifted u
-
-    // Restore modifier state.
-    set_mods(mods);
-    send_keyboard_report();
-    set_oneshot_mods(oneshot_mods);
-}
-
-void process_combo_event(uint16_t combo_index, bool pressed) {
-    switch (combo_index) {
-        case C_QU:
-            if (pressed) {
-                send_hd_qu();
-                smart_qu_active = true;
-                smart_qu_timer  = timer_read();
-            } else {
-                if (smart_qu_active && timer_elapsed(smart_qu_timer) > SMART_QU_DELETE_TERM) {
-                    tap_code(KC_BSPC);
-                }
-                smart_qu_active = false;
-            }
-            break;
-    }
+    return true;  // all smart combos are tap-only now
 }
 
 // Startup / wake pulse
@@ -340,9 +289,7 @@ static bool boring_mode = false;
 static bool calm_mode = false;
 static bool os_windows_mode = false;
 
-static bool rep_nav_pressed = false;
-static bool rep_nav_is_hold = false;
-static uint16_t rep_nav_timer = 0;
+static bool lang_magic_enabled = false; // Disabled by default: avoids conflicts like c+Magic=ch vs c+Magic=ç.
 
 static void tap_code16_without_user_shift(uint16_t keycode) {
     uint8_t mods         = get_mods();
@@ -413,12 +360,84 @@ static uint16_t hd_lang_cycle_key = KC_NO;
 static uint8_t hd_lang_cycle_step = 0;
 static bool hd_lang_cycle_active = false;
 
+#define HD_MAGIC_PENDING_TERM 220
+
+static uint16_t hd_magic_pending = KC_NO;
+static uint16_t hd_magic_pending_timer = 0;
+static bool     hd_magic_pending_consumed = false;
+static uint8_t  hd_magic_last_mods = 0;
+static uint8_t  hd_magic_prev_mods = 0;
+static uint8_t  hd_magic_pending_mods = 0;
+
+static void hd_magic_clear_history(void) {
+    hd_magic_last = KC_NO;
+    hd_magic_prev = KC_NO;
+    hd_magic_pending = KC_NO;
+    hd_magic_pending_consumed = false;
+    hd_magic_last_mods = 0;
+    hd_magic_prev_mods = 0;
+    hd_magic_pending_mods = 0;
+    hd_lang_cycle_key = KC_NO;
+    hd_lang_cycle_step = 0;
+    hd_lang_cycle_active = false;
+}
+
+static void hd_magic_set_pending(uint16_t keycode) {
+    if (keycode == KC_NO) {
+        return;
+    }
+    hd_magic_pending = keycode;
+    hd_magic_pending_timer = timer_read();
+    hd_magic_pending_consumed = false;
+    hd_magic_pending_mods = get_mods() | get_oneshot_mods();
+}
+
+static uint16_t hd_normalize_history_key(uint16_t keycode);
+
+static uint16_t hd_magic_get_trigger(bool *used_pending) {
+    if (hd_magic_pending != KC_NO && timer_elapsed(hd_magic_pending_timer) <= HD_MAGIC_PENDING_TERM) {
+        if (used_pending) {
+            *used_pending = true;
+        }
+        return hd_magic_pending;
+    }
+
+    if (used_pending) {
+        *used_pending = false;
+    }
+    return hd_magic_last;
+}
+
+static void hd_magic_consume_pending(void) {
+    if (hd_magic_pending != KC_NO) {
+        hd_magic_pending_consumed = true;
+    }
+}
+
+static bool hd_should_suppress_consumed_pending(uint16_t keycode) {
+    uint16_t hist = hd_normalize_history_key(keycode);
+    if (hd_magic_pending_consumed && hist != KC_NO && hist == hd_magic_pending) {
+        hd_magic_pending = KC_NO;
+        hd_magic_pending_consumed = false;
+        hd_magic_pending_mods = 0;
+        return true;
+    }
+    return false;
+}
+
+static bool hd_magic_trigger_shifted(bool used_pending) {
+    uint8_t trigger_mods = used_pending ? hd_magic_pending_mods : hd_magic_last_mods;
+    return ((trigger_mods | get_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT) != 0;
+}
+
 static void hd_magic_push(uint16_t keycode) {
     if (keycode == KC_NO) {
         return;
     }
     hd_magic_prev = hd_magic_last;
+    hd_magic_prev_mods = hd_magic_last_mods;
     hd_magic_last = keycode;
+    hd_magic_last_mods = get_mods() | get_oneshot_mods();
     hd_lang_cycle_active = false;
 }
 
@@ -451,6 +470,11 @@ static uint16_t hd_normalize_history_key(uint16_t keycode) {
         case KC_S: case KC_T: case KC_U: case KC_V: case KC_W: case KC_X:
         case KC_Y: case KC_Z:
             return keycode;
+
+        // Digits. Needed for language Magic such as 1 + Magic -> ¡.
+        case KC_1: case KC_2: case KC_3: case KC_4: case KC_5:
+        case KC_6: case KC_7: case KC_8: case KC_9: case KC_0:
+             return keycode;
 
         // Punctuation and shifted punctuation used for Code Magic.
         case KC_DOT:
@@ -495,6 +519,20 @@ static uint16_t hd_normalize_history_key(uint16_t keycode) {
 static uint16_t hd_repeat_last = KC_NO;
 static uint8_t  hd_repeat_mods = 0;
 
+#define HD_REPEAT_PENDING_TERM 500
+static uint16_t hd_repeat_pending = KC_NO;
+static uint8_t  hd_repeat_pending_mods = 0;
+static uint16_t hd_repeat_pending_timer = 0;
+
+static void hd_repeat_set_pending(uint16_t keycode) {
+    if (keycode == KC_NO) {
+        return;
+    }
+    hd_repeat_pending = keycode;
+    hd_repeat_pending_mods = get_mods() | get_oneshot_mods();
+    hd_repeat_pending_timer = timer_read();
+}
+
 static void hd_repeat_remember(uint16_t keycode) {
     if (keycode == KC_NO) {
         return;
@@ -502,10 +540,27 @@ static void hd_repeat_remember(uint16_t keycode) {
 
     hd_repeat_last = keycode;
     hd_repeat_mods = get_mods() | get_oneshot_mods();
+    hd_repeat_pending = keycode;
+    hd_repeat_pending_mods = hd_repeat_mods;
+    hd_repeat_pending_timer = timer_read();
 }
 
 static bool hd_do_repeat(void) {
-    if (hd_repeat_last == KC_NO) {
+    uint16_t repeat_key  = hd_repeat_last;
+    uint8_t  repeat_mods = hd_repeat_mods;
+
+    // Use the most recent key press/tap candidate first. This fixes fast
+    // sequences where Repeat is pressed before QMK has finished resolving the
+    // previous tap-hold key, and it also makes ordinary fast sequences like
+    // a b Repeat remember b even if the key is still held.
+    if (hd_repeat_pending != KC_NO && timer_elapsed(hd_repeat_pending_timer) <= HD_REPEAT_PENDING_TERM) {
+        repeat_key  = hd_repeat_pending;
+        repeat_mods = hd_repeat_pending_mods;
+        hd_repeat_last = repeat_key;
+        hd_repeat_mods = repeat_mods;
+    }
+
+    if (repeat_key == KC_NO) {
         return false;
     }
 
@@ -514,11 +569,11 @@ static bool hd_do_repeat(void) {
 
     // Approximate QMK Repeat behavior: remembered mods are combined with mods
     // currently held while pressing Repeat.
-    set_mods(mods | oneshot_mods | hd_repeat_mods);
+    set_mods(mods | oneshot_mods | repeat_mods);
     set_oneshot_mods(0);
     send_keyboard_report();
 
-    tap_code16(hd_repeat_last);
+    tap_code16(repeat_key);
 
     set_mods(mods);
     set_oneshot_mods(oneshot_mods);
@@ -618,18 +673,225 @@ static bool hd_do_lang_magic(void) {
     return false;
 }
 
+
+// -----------------------------------------------------------------------------
+// Direct Language Magic on the normal Magic key
+// -----------------------------------------------------------------------------
+// Conflict policy:
+// - c/s keep ch/sh, so ç/ß move to x/z.
+// - n keeps n't, so ñ moves to y.
+// - i + Magic becomes "I" only in standalone-I context; otherwise it becomes í/ì/ï.
+// - Vowels cycle acute -> grave -> umlaut on repeated Magic.
+
+static uint32_t hd_accented_vowel_codepoint(uint16_t base, uint8_t step, bool shifted) {
+    switch (base) {
+        case KC_A:
+            return step == 0 ? (shifted ? 0x00C1 : 0x00E1) : step == 1 ? (shifted ? 0x00C0 : 0x00E0) : (shifted ? 0x00C4 : 0x00E4);
+        case KC_E:
+            return step == 0 ? (shifted ? 0x00C9 : 0x00E9) : step == 1 ? (shifted ? 0x00C8 : 0x00E8) : (shifted ? 0x00CB : 0x00EB);
+        case KC_I:
+            return step == 0 ? (shifted ? 0x00CD : 0x00ED) : step == 1 ? (shifted ? 0x00CC : 0x00EC) : (shifted ? 0x00CF : 0x00EF);
+        case KC_O:
+            return step == 0 ? (shifted ? 0x00D3 : 0x00F3) : step == 1 ? (shifted ? 0x00D2 : 0x00F2) : (shifted ? 0x00D6 : 0x00F6);
+        case KC_U:
+            return step == 0 ? (shifted ? 0x00DA : 0x00FA) : step == 1 ? (shifted ? 0x00D9 : 0x00F9) : (shifted ? 0x00DC : 0x00FC);
+    }
+    return 0;
+}
+
+static bool hd_i_magic_is_pronoun_context(bool used_pending) {
+    // Keep i + Magic dedicated to accented vowels for now. The English "I"
+    // brief was useful in theory, but multilingual typing benefits more from
+    // making í/ì/ï deterministic and conflict-free.
+    (void)used_pending;
+    return false;
+}
+
+static bool hd_magic_send_unicode_replace_or_pending(uint32_t codepoint, uint16_t history_key, bool used_pending) {
+    if (codepoint == 0) {
+        return false;
+    }
+
+    // Direct language Magic is replacement-style: x+Magic should become ç,
+    // y+Magic should become ñ, etc. In this QMK/tap-hold timing, even a
+    // "pending" tap-hold letter is usually already emitted by the time Magic
+    // runs, so always erase the plain trigger before sending Unicode.
+    tap_code(KC_BSPC);
+
+    register_unicode(codepoint);
+    hd_magic_push(history_key);
+    hd_repeat_remember(history_key);
+
+    if (used_pending) {
+        hd_magic_consume_pending();
+    }
+
+    return true;
+}
+
+static bool hd_magic_replace_with_key(uint16_t keycode, uint16_t history_key, bool used_pending) {
+    tap_code(KC_BSPC);
+    tap_code16_without_user_shift(keycode);
+    hd_magic_push(history_key);
+    hd_repeat_remember(keycode);
+
+    if (used_pending) {
+        hd_magic_consume_pending();
+    }
+
+    return true;
+}
+
+static bool hd_magic_vowel(uint16_t base, bool used_pending) {
+    if (base != KC_A && base != KC_E && base != KC_I && base != KC_O && base != KC_U) {
+        return false;
+    }
+
+    if (base == KC_I && hd_i_magic_is_pronoun_context(used_pending)) {
+        // i + Magic -> I in English-pronoun context. Replacement-style:
+        // erase the emitted i, then send I.
+        tap_code(KC_BSPC);
+        tap_code16_without_user_shift(S(KC_I));
+        hd_magic_push(KC_I);
+        hd_repeat_remember(S(KC_I));
+        if (used_pending) {
+            hd_magic_consume_pending();
+        }
+        return true;
+    }
+
+    if (hd_lang_cycle_active && hd_lang_cycle_key == base) {
+        // Repeated Magic cycles the accent and replaces the previous accented vowel.
+        tap_code(KC_BSPC);
+        hd_lang_cycle_step = (hd_lang_cycle_step + 1) % 3;
+    } else {
+        hd_lang_cycle_key = base;
+        hd_lang_cycle_step = 0;
+        // First Magic replaces the already-emitted plain vowel. This also
+        // applies to pending HRM/layer-tap vowels because QMK has usually
+        // emitted the tap before Magic runs.
+        tap_code(KC_BSPC);
+    }
+
+    uint32_t cp = hd_accented_vowel_codepoint(base, hd_lang_cycle_step, hd_magic_trigger_shifted(used_pending));
+    register_unicode(cp);
+
+    hd_magic_push(base);
+    hd_lang_cycle_key = base;
+    hd_lang_cycle_active = true;
+    hd_repeat_remember(base);
+
+    if (used_pending) {
+        hd_magic_consume_pending();
+    }
+
+    return true;
+}
+
+static bool hd_do_direct_language_magic(uint16_t trigger, bool used_pending) {
+    switch (trigger) {
+        case KC_A:
+        case KC_E:
+        case KC_I:
+        case KC_O:
+        case KC_U:
+            return hd_magic_vowel(trigger, used_pending);
+
+        case KC_K:
+            return hd_magic_replace_with_key(hd_magic_trigger_shifted(used_pending) ? S(KC_Q) : KC_Q, KC_Q, used_pending); // k + Magic -> q/Q
+
+        case KC_Y:
+            return hd_magic_send_unicode_replace_or_pending(hd_magic_trigger_shifted(used_pending) ? 0x00D1 : 0x00F1, KC_N, used_pending); // y + Magic -> ñ/Ñ
+        case KC_X:
+            return hd_magic_send_unicode_replace_or_pending(hd_magic_trigger_shifted(used_pending) ? 0x00C7 : 0x00E7, KC_C, used_pending); // x + Magic -> ç/Ç
+        case KC_Z:
+            return hd_magic_send_unicode_replace_or_pending(hd_magic_trigger_shifted(used_pending) ? 0x1E9E : 0x00DF, KC_S, used_pending); // z + Magic -> ß/ẞ
+
+        case KC_1:
+            return hd_magic_send_unicode_replace_or_pending(0x00A1, KC_1, used_pending);       // 1 + Magic -> ¡
+        case S(KC_SLSH):
+            return hd_magic_send_unicode_replace_or_pending(0x00BF, KC_SLSH, used_pending);    // ? + Magic -> ¿
+        case S(KC_2):
+            return hd_magic_send_unicode_replace_or_pending(0x20AC, S(KC_2), used_pending);    // @ + Magic -> €
+        case KC_SCLN:
+            return hd_magic_send_unicode_replace_or_pending(0x00B7, KC_DOT, used_pending);     // ; + Magic -> ·
+    }
+
+    return false;
+}
+
 static bool hd_do_base_magic(void) {
     if (boring_mode) {
         return false;
     }
 
-    // Language Magic: press LANG, then Magic, after the base letter.
-    if (IS_LAYER_ON(_LANG)) {
+    bool used_pending = false;
+    uint16_t trigger = hd_magic_get_trigger(&used_pending);
+    if (trigger == KC_NO) {
+        return false;
+    }
+
+    // Language Magic is disabled by default because normal Magic already uses
+    // c/s/n/vowels for digraphs and briefs. Keep it behind an explicit flag for later.
+    if (lang_magic_enabled && IS_LAYER_ON(_LANG)) {
         return hd_do_lang_magic();
     }
 
-    // In Calm Mode, keep only the most ergonomic base completions.
-    switch (hd_magic_last) {
+    // Direct language Magic lives on the normal Magic key and avoids conflicts
+    // by using proxy triggers where normal Magic already has a high-value rule.
+    // Keep c/s/n for ch/sh/n't; use x/z/y for ç/ß/ñ.
+    if (hd_do_direct_language_magic(trigger, used_pending)) {
+        return true;
+    }
+
+    // Pending Magic uses the still-held tap-hold key only as a trigger.
+    // In this keymap/QMK timing, the base tap is often already emitted by the
+    // time Magic runs. Therefore pending Magic must send only the completion,
+    // not the whole digraph/snippet, or fast t+Magic becomes tth.
+    if (used_pending) {
+        switch (trigger) {
+            case KC_T:
+            case KC_C:
+            case KC_S:
+            case KC_W:
+            case KC_G:
+            case KC_P:
+                hd_magic_send(KC_H);      // pending t/c/s/w/g/p + Magic -> add h
+                hd_magic_consume_pending();
+                return true;
+            case KC_I:
+                // pending i + Magic -> I. The base i has usually already been
+                // emitted, so replace it just like the non-pending path.
+                tap_code(KC_BSPC);
+                tap_code16(S(KC_I));
+                hd_magic_push(KC_I);
+                hd_repeat_remember(S(KC_I));
+                hd_magic_consume_pending();
+                return true;
+            case KC_N:
+                hd_send_string_unshifted("'t");       // pending n + Magic -> n't
+                hd_magic_push(KC_T);
+                hd_repeat_remember(KC_T);
+                hd_magic_consume_pending();
+                return true;
+            case KC_H:
+                hd_send_string_unshifted("ave");      // pending h + Magic -> have
+                hd_magic_push(KC_E);
+                hd_repeat_remember(KC_E);
+                hd_magic_consume_pending();
+                return true;
+            case KC_SPC:
+                hd_send_string_unshifted("the");      // pending Space + Magic -> " the"
+                hd_magic_push(KC_E);
+                hd_repeat_remember(KC_E);
+                hd_magic_consume_pending();
+                return true;
+        }
+    }
+
+    // Non-pending Magic: the trigger key has already been emitted, so append
+    // only the completion or replace the already-emitted trigger where needed.
+    switch (trigger) {
         case KC_Q:
             return hd_magic_send(KC_U); // q + Magic -> qu
         case KC_T:
@@ -645,8 +907,29 @@ static bool hd_do_base_magic(void) {
         return false;
     }
 
+    // Tiny briefs. These are intentionally small and non-editor-specific.
+    switch (trigger) {
+        case KC_I:
+            // i + Magic -> I.
+            tap_code(KC_BSPC);
+            tap_code16(S(KC_I));
+            hd_magic_push(KC_I);
+            hd_repeat_remember(S(KC_I));
+            return true;
+        case KC_N:
+            hd_send_string_unshifted("'t");      // n + Magic -> n't
+            hd_magic_push(KC_T);
+            hd_repeat_remember(KC_T);
+            return true;
+        case KC_H:
+            hd_send_string_unshifted("ave");     // h + Magic -> have
+            hd_magic_push(KC_E);
+            hd_repeat_remember(KC_E);
+            return true;
+    }
+
     // Code / punctuation Magic.
-    switch (hd_magic_last) {
+    switch (trigger) {
         case KC_DOT:      return hd_magic_send(KC_SLSH);     // ./
         case KC_MINS:     return hd_magic_send(S(KC_DOT));   // ->
         case KC_SLSH:     return hd_magic_send(S(KC_8));     // /*
@@ -662,10 +945,12 @@ static bool hd_do_base_magic(void) {
             tap_code16_without_user_shift(S(KC_RBRC));
             tap_code(KC_LEFT);
             hd_magic_push(S(KC_RBRC));
+            hd_repeat_remember(S(KC_RBRC));
             return true;
         case KC_SPC:
             hd_send_string_unshifted("the");                // minimal brief: Space + Magic -> the
             hd_magic_push(KC_E);
+            hd_repeat_remember(KC_E);
             return true;
     }
 
@@ -716,6 +1001,7 @@ bool remember_last_key_user(uint16_t keycode, keyrecord_t *record, uint8_t *reme
         case BORING:
         case CALM:
         case OS_MODE:
+        case REP_NAV:
         case HD_MAGIC:
         case HD_SKIP_MAGIC:
         case QK_LLCK:
@@ -725,17 +1011,7 @@ bool remember_last_key_user(uint16_t keycode, keyrecord_t *record, uint8_t *reme
     return true;
 }
 
-
-// -----------------------------------------------------------------------------
-// Matrix scan
-// -----------------------------------------------------------------------------
-
-void matrix_scan_user(void) {
-    if (rep_nav_pressed && !rep_nav_is_hold && timer_elapsed(rep_nav_timer) > TAPPING_TERM) {
-        layer_on(_NAV);
-        rep_nav_is_hold = true;
-    }
-}
+static bool hd_rep_nav_repeat_sent = false;
 
 // -----------------------------------------------------------------------------
 // Main key processing
@@ -746,12 +1022,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case BORING:
             if (record->event.pressed) {
                 boring_mode = !boring_mode;
+                hd_magic_clear_history();
             }
             return false;
 
         case CALM:
             if (record->event.pressed) {
                 calm_mode = !calm_mode;
+                hd_magic_clear_history();
             }
             return false;
 
@@ -762,23 +1040,25 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
 
         case REP_NAV:
+            // REP_NAV = LT(_NAV, KC_F24). Let QMK handle the hold side normally.
+            // Some QMK paths expose the tap as REP_NAV on release; others expose
+            // the tap key KC_F24. Handle both, guarded against double-repeat.
             if (record->event.pressed) {
-                rep_nav_pressed = true;
-                rep_nav_is_hold = false;
-                rep_nav_timer = timer_read();
-            } else {
-                if (rep_nav_is_hold) {
-                    layer_off(_NAV);
-                } else {
-                    hd_do_repeat();
-                    // keyrecord_t rep_record = *record;
-                    // rep_record.event.pressed = true;
-                    // process_repeat_key(QK_REP, &rep_record);
-                    // rep_record.event.pressed = false;
-                    // process_repeat_key(QK_REP, &rep_record);tap_code16(QK_REP);
-                }
-                rep_nav_pressed = false;
-                rep_nav_is_hold = false;
+                hd_rep_nav_repeat_sent = false;
+                return true;
+            }
+            if (record->tap.count && !hd_rep_nav_repeat_sent) {
+                hd_do_repeat();
+                hd_rep_nav_repeat_sent = true;
+                return false;
+            }
+            return true;
+
+        case KC_F24:
+            // Dummy tap side of REP_NAV. Never send F24 to the host.
+            if (record->event.pressed && !hd_rep_nav_repeat_sent) {
+                hd_do_repeat();
+                hd_rep_nav_repeat_sent = true;
             }
             return false;
 
@@ -832,6 +1112,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case HD_PH:
             if (record->event.pressed) { send_hd_digraph(KC_P, KC_H); hd_magic_push(KC_H); hd_repeat_remember(KC_H); }
             return false;
+        case KC_ESC:
+        case KC_ENT:
+            if (record->event.pressed) {
+                hd_magic_clear_history();
+            }
+            break;
 
         case P_DOT_COLN:
             if (record->event.pressed) {
@@ -908,12 +1194,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             case HRM_A: case HRM_E: case HRM_I: case HRM_H:
             case R_NUM: case D_NAV: case V_SYM: case L_NUM:
             case O_NAV: case U_SYM: case Y_NUM: case SPC_SYM:
+                if (hist != KC_NO) {
+                    hd_magic_set_pending(hist);
+                    hd_repeat_set_pending(hist);
+                }
                 break; // tap-hold keys are handled on release if tapped.
             default:
                 if (hist != KC_NO) {
                     hd_magic_push(hist);
                 }
                 if (rep != KC_NO) {
+                    hd_repeat_set_pending(rep);
                     hd_repeat_remember(rep);
                 }
                 break;
@@ -922,6 +1213,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (record->tap.count > 0) {
             uint16_t hist = hd_normalize_history_key(keycode);
             if (hist != KC_NO) {
+                if (hd_should_suppress_consumed_pending(keycode)) {
+                    return false;
+                }
                 hd_magic_push(hist);
                 hd_repeat_remember(hist);
             }
@@ -974,8 +1268,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      *            _____ _____ Num        _____ _____ _____
      */
     [_SYM] = LAYOUT_split_3x5_3_ex2(
-        S(KC_1),   S(KC_2),   S(KC_3),   S(KC_4),   S(KC_5),   _______,     _______, XXXXXXX,    XXXXXXX,    S(KC_BSLS), KC_BSLS,    XXXXXXX,
-        S(KC_6),   S(KC_7),   S(KC_8),   S(KC_EQL), KC_EQL,    _______,     _______, XXXXXXX,    S(KC_9),    S(KC_LBRC), KC_LBRC,    S(KC_COMM),
+        S(KC_1),   S(KC_2),   S(KC_3),   S(KC_4),   S(KC_5),   _______,     _______, XXXXXXX,    KC_Q,    S(KC_BSLS), KC_BSLS,    KC_Z,
+        S(KC_6),   S(KC_7),   S(KC_8),   S(KC_EQL), KC_EQL,    _______,     _______, KC_MINS,    S(KC_9),    S(KC_LBRC), KC_LBRC,    S(KC_COMM),
         S(KC_GRV), KC_MINS,   S(KC_MINS), S(KC_SCLN), KC_SCLN,                       KC_GRV,     S(KC_0),    S(KC_RBRC), KC_RBRC,    S(KC_DOT),
                                           _______, QK_LLCK, QK_LLCK,                      QK_LLCK, QK_LLCK, _______
     ),
@@ -986,7 +1280,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_NUM] = LAYOUT_split_3x5_3_ex2(
         KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   _______,     _______, KC_SLSH, KC_7,    KC_8,    KC_9,    KC_MINS,
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,     _______, S(KC_8), KC_4,    KC_5,    KC_6,    S(KC_EQL),
-        KC_F11,  KC_F12,  KC_0,  KC_DOT,  KC_EQL,                            S(KC_5), KC_1,    KC_2,    KC_3,    KC_0,
+        KC_F11,  KC_F12,  KC_0,  KC_DOT,  KC_EQL,                            KC_DOT, KC_1,    KC_2,    KC_3,    KC_0,
                                       _______, QK_LLCK, QK_LLCK,     QK_LLCK, QK_LLCK, _______
     ),
 
@@ -1006,7 +1300,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      * Layer 5 — System
      */
     [_SYS] = LAYOUT_split_3x5_3_ex2(
-        UC_LINX, UC_WIN,  VIBRA,   QWERTY,  XXXXXXX, QK_BOOT,    QK_BOOT, KC_PSCR, KC_SCRL, KC_PAUS, XXXXXXX, XXXXXXX,
+        UC_LINX, UC_WIN,  VIBRA,   QWERTY,  MOUSE_TG, QK_BOOT,    QK_BOOT, KC_PSCR, KC_SCRL, KC_PAUS, XXXXXXX, XXXXXXX,
         KC_MUTE, KC_VOLD, KC_VOLU, KC_BRID, KC_BRIU, _______,     _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MSTP, XXXXXXX,
         CM_TOGG, CALM,    OS_MODE, KC_NUM,  KC_APP,                         SH_TOGG, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
                                       _______, _______, _______,     _______, _______, _______
@@ -1016,7 +1310,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      * Layer 6 — Mouse / scroll
      */
     [_MOUSE] = LAYOUT_split_3x5_3_ex2(
-        _______, _______, _______, _______, _______, _______,      _______, MS_WHLL, MS_WHLU, MS_WHLR, _______, _______,
+        _______, _______, _______, _______, MOUSE_TG, _______,      _______, MS_WHLL, MS_WHLU, MS_WHLR, _______, _______,
         _______, _______, _______, _______, _______, _______,      _______, MS_LEFT, MS_DOWN, MS_UP,   MS_RGHT, MS_BTN2,
         _______, _______, _______, _______, _______,               _______, MS_BTN1, MS_WHLD, MS_BTN3, _______,
                                       _______, QK_LLCK, _______,  _______, _______, _______
