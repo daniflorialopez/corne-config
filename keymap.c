@@ -1244,7 +1244,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
         KC_X,    KC_W,    KC_M,    KC_G,    KC_J,    LANG,       KC_TAB,  KC_ENT,         KC_ESC,   P_DOT_SLSH,  P_COMM_QUES, P_QUOT_DQUO,
         HRM_S,   HRM_C,   HRM_N,   HRM_T,   KC_K,    SYS,        SYS,     HD_MAGIC,       HRM_A,    HRM_E,       HRM_I,       HRM_H,
-        KC_F,    KC_P,    L_NUM,   D_NAV,   V_SYM,                        HD_SKIP_MAGIC,  U_SYM,    O_NAV,       Y_NUM,       KC_B,
+        KC_F,    KC_P,    L_NUM,   D_NAV,   V_SYM,                        /*HD_SKIP_MAGIC*/ KC_R,  U_SYM,    O_NAV,       Y_NUM,       KC_B,
                                    CW_TOGG, BORING, R_NUM,        REP_NAV, SPC_SYM, KC_BSPC
     ),
 
@@ -1261,9 +1261,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /*
      * Layer 2 — Symbols
      *
-     * !   @   #   $   %      _____     _____     XXXXX  XXXXX  |   \   XXXXX
-     * ^   &   *   +   =      _____     _____     XXXXX  (      {   [   <
-     * ~   -   _   :   ;                          `      )      }   ]   >
+     * !   @   #   $   %      _____     _____     XXXXX  q  |   \   z
+     * ^   &   *   +   =      _____     _____     XXXXX  (  {   [   <
+     * ~   -   _   :   ;                          `      )  }   ]   >
      *
      *            _____ _____ Num        _____ _____ _____
      */
