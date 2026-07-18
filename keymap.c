@@ -1,15 +1,18 @@
 #include QMK_KEYBOARD_H
 #include "process_repeat_key.h"
 
+// Default layers (_BASE, _QWERTY) must stay below all momentary layers:
+// the default layer is looked up at its bit position, so a high default
+// layer shadows every layer beneath it.
 enum layers {
     _BASE,
+    _QWERTY,
     _NAV,
     _SYM,
     _NUM,
     _LANG,
     _SYS,
-    _MOUSE,
-    _QWERTY
+    _MOUSE
 };
 
 #define NAV     MO(_NAV)
@@ -239,6 +242,11 @@ static void start_activity_pulse(uint8_t hue, uint8_t sat) {
 }
 
 void keyboard_post_init_user(void) {
+    // Older firmware stored _QWERTY as layer 7; after the layer reorder a
+    // stale EEPROM default would land on a momentary layer. Reset it.
+    if (get_highest_layer(default_layer_state) > _QWERTY) {
+        set_single_persistent_default_layer(_BASE);
+    }
     start_activity_pulse(170, 200); // blue startup pulse
 }
 

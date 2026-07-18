@@ -23,26 +23,30 @@ qmk compile -kb crkbd/rev4_1/mini -km vibranium_f
 ```c
 enum layers {
     _BASE,
+    _QWERTY,
     _NAV,
     _SYM,
     _NUM,
     _LANG,
     _SYS,
-    _MOUSE,
-    _QWERTY
+    _MOUSE
 };
 ```
+
+Default layers (`_BASE`, `_QWERTY`) must stay below all momentary layers:
+the default layer is looked up at its bit position, so a high default layer
+would shadow every layer beneath it.
 
 | Layer | Purpose |
 |---|---|
 | `_BASE` | Main Vibranium-f-style typing layer |
+| `_QWERTY` | Rescue QWERTY layer |
 | `_NAV` | Navigation, editing, tab/window movement, layer lock |
 | `_SYM` | Symbols and programming punctuation |
 | `_NUM` | Numbers, function keys, numeric punctuation |
 | `_LANG` | Legacy/fallback Unicode layer |
 | `_SYS` | System/media/boot/default-layer/mouse-toggle controls |
 | `_MOUSE` | Firmware mouse and scroll fallback |
-| `_QWERTY` | Rescue QWERTY layer |
 
 ## Base layout
 
