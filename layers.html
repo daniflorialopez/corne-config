@@ -589,7 +589,11 @@ LAYERS.forEach(L => {
 
 /* tables ------------------------------------------------------------ */
 const MAGIC = [
-  ["n","ng","0.631%","largest reduction in left-hand keystrokes available"],
+  ["e","es","0.990%","biggest relief on the board — about 25% of left-pinky load"],
+  ["n","ng","0.631%","largest single-letter reduction in left-hand keystrokes"],
+  ["Space","the","0.705%","word brief — saves motion AND left-hand load"],
+  ["i","is","0.404%","all of the relief lands on the left pinky"],
+  ["s","sta","0.313%","free lunch — the only rule that emits two letters"],
   ["m","mp","0.154%","best-scoring rule in all three languages"],
   ["r","rs","0.298%","left-pinky relief; costs a little motion"],
   ["t","ts","0.281%","replaced t→h, which cost more than every other rule earned"],
@@ -602,7 +606,8 @@ const MAGIC = [
   ["p","ph","0.080%","kept"],
   ["q","qu","—","q itself comes from the T+K chord"],
   ["k","q","—","replacement, not append: keeps q off the symbol layer"],
-  ["n, then Magic again","n't","—","second press rewrites ng into n't"]
+  ["n, then Magic again","n't","—","second press rewrites ng into n't"],
+  ["anything, then Magic again","—","—","inert: a chained Magic has no rule and does nothing"]
 ];
 document.getElementById("magic").innerHTML = MAGIC.map(r =>
   '<tr><td>' + r[0] + ' + Magic</td><td class="out">' + r[1] +
