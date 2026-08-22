@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vibranium-f — layer reference</title>
+<meta name="description" content="All eight layers of the Vibranium-f keymap for a 40-key Corne rev4.1 mini.">
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { min-height: 100vh; }
+    img, svg, video { display: block; max-width: 100%; }
+    table { border-collapse: collapse; }
+    a { color: inherit; }
+</style>
+</head>
+<body>
+<style>
+  :root {
+    --bg:        #F2F3F5;
+    --surface:   #FFFFFF;
+    --surface-2: #E9EBEF;
+    --ink:       #14181D;
+    --ink-2:     #5A6472;
+    --ink-3:     #8B94A1;
+    --line:      #D7DCE3;
+    --line-soft: #E6E9EE;
+    --copper:    #A85F2B;
+    --verdi:     #23726B;
+    --verdi-bg:  #E2EFEE;
+    --shadow:    0 1px 0 rgba(20,24,29,.06), 0 1px 3px rgba(20,24,29,.07);
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+
+    --key: clamp(40px, 4.3vw, 56px);
+    --gap: 5px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0E1216; --surface:#161B21; --surface-2:#1D242C;
+      --ink:#E4E8ED; --ink-2:#97A1AE; --ink-3:#6C7684;
+      --line:#262D36; --line-soft:#1F262E;
+      --copper:#D89159; --verdi:#58B2A8; --verdi-bg:#132623;
+      --shadow:0 1px 0 rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#0E1216; --surface:#161B21; --surface-2:#1D242C;
+    --ink:#E4E8ED; --ink-2:#97A1AE; --ink-3:#6C7684;
+    --line:#262D36; --line-soft:#1F262E;
+    --copper:#D89159; --verdi:#58B2A8; --verdi-bg:#132623;
+    --shadow:0 1px 0 rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"] {
+    --bg:#F2F3F5; --surface:#FFFFFF; --surface-2:#E9EBEF;
+    --ink:#14181D; --ink-2:#5A6472; --ink-3:#8B94A1;
+    --line:#D7DCE3; --line-soft:#E6E9EE;
+    --copper:#A85F2B; --verdi:#23726B; --verdi-bg:#E2EFEE;
+    --shadow:0 1px 0 rgba(20,24,29,.06), 0 1px 3px rgba(20,24,29,.07);
+  }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--serif); font-size: 16px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px 96px; }
+
+  /* masthead ------------------------------------------------------- */
+  header.mast { padding: 56px 0 26px; border-bottom: 2px solid var(--ink); }
+  .eyebrow {
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--copper); margin-bottom: 14px;
+  }
+  h1 {
+    font-family: var(--mono); font-size: clamp(1.75rem, 4.5vw, 2.5rem);
+    font-weight: 600; letter-spacing: -.02em; line-height: 1.1;
+    text-wrap: balance; margin-bottom: 12px;
+  }
+  .dek { font-size: 1.0625rem; color: var(--ink-2); max-width: 64ch; }
+  .dek code, .dek b { font-family: var(--mono); font-size: .9em; font-weight: 500; color: var(--ink); }
+  .specs {
+    display: flex; flex-wrap: wrap; gap: 6px 24px; margin-top: 22px;
+    font-family: var(--mono); font-size: .75rem; color: var(--ink-3);
+  }
+  .specs b { color: var(--ink-2); font-weight: 500; }
+
+  /* nav ------------------------------------------------------------ */
+  nav.layers {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+    padding: 10px 0; display: flex; gap: 4px; overflow-x: auto;
+  }
+  nav.layers a {
+    font-family: var(--mono); font-size: .75rem; white-space: nowrap;
+    color: var(--ink-2); text-decoration: none;
+    padding: 5px 10px; border-radius: 3px;
+  }
+  nav.layers a:hover { color: var(--ink); background: var(--surface-2); }
+  nav.layers a:focus-visible { outline: 2px solid var(--copper); outline-offset: 1px; }
+  nav.layers a .idx { color: var(--copper); }
+
+  /* legend --------------------------------------------------------- */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 20px;
+    padding: 16px 0 24px; border-bottom: 1px solid var(--line-soft);
+    font-family: var(--mono); font-size: .75rem; color: var(--ink-2);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch {
+    width: 22px; height: 16px; border-radius: 2px; flex: none;
+    border: 1px solid var(--line); background: var(--surface); display: inline-block;
+  }
+  .swatch.mod   { border-bottom: 3px solid var(--copper); }
+  .swatch.layer { border-bottom: 3px solid var(--verdi); }
+  .swatch.adapt { background: var(--verdi-bg); border-color: var(--verdi); }
+  .swatch.trans { background: var(--surface-2); border-style: dashed; }
+  .pillsample {
+    font-family: var(--mono); font-size: .5625rem; font-weight: 700;
+    background: var(--copper); color: var(--surface);
+    border-radius: 7px; padding: 1px 6px; flex: none;
+  }
+
+  /* sections ------------------------------------------------------- */
+  section.layer { padding: 42px 0 10px; border-bottom: 1px solid var(--line-soft); }
+  .lhead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .lnum {
+    font-family: var(--mono); font-size: .8125rem; color: var(--copper);
+    border: 1px solid var(--copper); border-radius: 3px; padding: 1px 7px;
+  }
+  h2 {
+    font-family: var(--mono); font-size: 1.375rem; font-weight: 600;
+    letter-spacing: -.01em; text-wrap: balance;
+  }
+  .how { font-family: var(--mono); font-size: .75rem; color: var(--ink-3); }
+  .lbody { display: grid; grid-template-columns: minmax(0,1fr); gap: 22px; margin-top: 20px; }
+  @media (min-width: 1000px) {
+    .lbody { grid-template-columns: minmax(0,1fr) 252px; gap: 34px; align-items: start; }
+  }
+  aside.notes {
+    font-size: .9375rem; color: var(--ink-2); line-height: 1.62;
+    border-left: 2px solid var(--copper); padding-left: 16px;
+  }
+  aside.notes p + p { margin-top: 10px; }
+  aside.notes code {
+    font-family: var(--mono); font-size: .8125em; color: var(--ink);
+    background: var(--surface-2); padding: 1px 4px; border-radius: 2px;
+  }
+
+  /* board ---------------------------------------------------------- */
+  .board-scroll { overflow-x: auto; padding: 4px 0 2px; }
+  .board { display: inline-flex; flex-direction: column; gap: 16px; min-width: min-content; }
+  .halves { display: flex; gap: calc(var(--key) * 0.75); }
+  .half { display: flex; gap: var(--gap); position: relative; }
+  .col {
+    display: flex; flex-direction: column; gap: var(--gap);
+    margin-top: var(--s, 0px); position: relative;
+  }
+
+  .key {
+    width: var(--key); height: var(--key);
+    border: 1px solid var(--line); border-radius: 4px;
+    background: var(--surface); box-shadow: var(--shadow);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 1px; padding: 2px; font-family: var(--mono);
+    text-align: center; overflow: hidden;
+  }
+  .key .t {
+    font-size: clamp(.6875rem, 1.5vw, .875rem); font-weight: 500;
+    line-height: 1.05; color: var(--ink); word-break: break-word;
+  }
+  .key .t.med  { font-size: clamp(.5625rem, 1.2vw, .75rem); }
+  .key .t.long { font-size: clamp(.5rem, 1.02vw, .625rem); font-weight: 400; }
+  .key .s {
+    font-size: clamp(.4375rem, .92vw, .5625rem); letter-spacing: .04em;
+    text-transform: uppercase; color: var(--ink-3); line-height: 1;
+  }
+  .key.mod   { border-bottom: 3px solid var(--copper); }
+  .key.mod .s { color: var(--copper); }
+  .key.layer { border-bottom: 3px solid var(--verdi); }
+  .key.layer .s { color: var(--verdi); }
+  .key.adapt { background: var(--verdi-bg); border-color: var(--verdi); }
+  .key.adapt .t { color: var(--verdi); font-weight: 600; }
+  .key.trans { background: var(--surface-2); border-style: dashed; box-shadow: none; }
+  .key.trans .t { color: var(--ink-3); font-weight: 400; }
+  .key.none { background: transparent; border-color: var(--line-soft); box-shadow: none; }
+  .key.none .t { color: var(--ink-3); opacity: .5; }
+  .key.blank { visibility: hidden; }
+  .key.warn { border-color: var(--copper); }
+  .key.warn .t { color: var(--copper); }
+
+  /* chord badge: sits on the seam between the two keys it joins */
+  .chordbadge {
+    position: absolute; z-index: 5;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono); font-size: .5625rem; font-weight: 700;
+    line-height: 1; letter-spacing: .02em;
+    padding: 3px 6px; border-radius: 8px;
+    background: var(--copper); color: var(--surface);
+    border: 2px solid var(--bg);
+    pointer-events: none; white-space: nowrap;
+  }
+  .cb-v { left: 50%; }
+  .cb-v.seam0 { top: calc(var(--key) + var(--gap) / 2); }
+  .cb-v.seam1 { top: calc(var(--key) * 2 + var(--gap) * 1.5); }
+
+  .thumbrow {
+    display: flex; gap: calc(var(--key) * 0.75);
+    padding-left: calc(3 * (var(--key) + var(--gap)));
+  }
+  .tgroup { display: flex; gap: var(--gap); }
+
+  .colnames {
+    display: flex; gap: calc(var(--key) * 0.75); margin-bottom: 6px;
+    font-family: var(--mono); font-size: .5625rem; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .colnames .half { gap: var(--gap); }
+  .colnames span { width: var(--key); text-align: center; display: block; }
+
+  /* tables --------------------------------------------------------- */
+  h3 {
+    font-family: var(--mono); font-size: 1rem; font-weight: 600;
+    margin: 36px 0 10px; letter-spacing: -.01em;
+  }
+  .lede { color: var(--ink-2); font-size: .9375rem; max-width: 64ch; margin-bottom: 14px; }
+  .tablewrap { overflow-x: auto; }
+  table {
+    border-collapse: collapse; width: 100%; min-width: 480px;
+    font-family: var(--mono); font-size: .8125rem; font-variant-numeric: tabular-nums;
+  }
+  th, td { text-align: left; padding: 7px 14px 7px 0; border-bottom: 1px solid var(--line-soft); }
+  th {
+    font-size: .625rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 500; border-bottom-color: var(--line);
+  }
+  td.out { color: var(--verdi); font-weight: 600; }
+  td.note { font-family: var(--serif); font-size: .875rem; color: var(--ink-2); font-weight: 400; }
+  .num { text-align: right; padding-right: 18px; }
+
+  footer {
+    margin-top: 52px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: .6875rem; color: var(--ink-3);
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">Corne rev4.1 mini · LAYOUT_split_3x5_3_ex2 · 40 keys</div>
+    <h1>Vibranium-f — layer reference</h1>
+    <p class="dek">Hands Down Vibranium-f on a 40-key split, tuned against measured EN/ES/CA
+      corpus load. Every diagram is transcribed from <code>keymap.c</code> in physical order —
+      so the left half reads <b>outward column first</b> (pinky on the far left) and the right
+      half reads <b>inward column first</b> (pinky on the far right), exactly as the two halves
+      sit on the desk. Column stagger is drawn to scale.</p>
+    <div class="specs">
+      <span><b>8</b> layers</span>
+      <span><b>8</b> chords</span>
+      <span><b>14</b> Magic rules</span>
+      <span><b>4+4</b> home-row mods</span>
+    </div>
+  </header>
+
+  <nav class="layers" id="nav" aria-label="Layers"></nav>
+
+  <div class="legend">
+    <span><i class="swatch"></i> plain key</span>
+    <span><i class="swatch mod"></i> home-row mod — tap letter, hold modifier</span>
+    <span><i class="swatch layer"></i> layer tap-hold</span>
+    <span><i class="swatch adapt"></i> adaptive — Magic, Arcane, Repeat</span>
+    <span><i class="swatch trans"></i> falls through to base</span>
+    <span><i class="pillsample">s</i> chord — press both keys together</span>
+  </div>
+
+  <div id="out"></div>
+
+  <section>
+    <h3>Magic — letter completions</h3>
+    <p class="lede">Magic sits on the right index-inner home key. It appends a completion to
+      whatever you typed last. Every rule was picked by measured value on the corpus, not by feel.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Type</th><th>You get</th><th class="num">EN freq</th><th>Why it earns its place</th></tr></thead>
+        <tbody id="magic"></tbody>
+      </table>
+    </div>
+
+    <h3>Arcane — accents, on the left middle thumb</h3>
+    <p class="lede">A dedicated key means no collisions with the letter rules, so the natural
+      trigger works directly. Vowels cycle on repeated presses — timer-free, so it never stalls
+      waiting for a second tap. Shift gives the capital of any of them.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Type</th><th>Once</th><th>Twice</th><th>Three times</th></tr></thead>
+        <tbody id="arcane"></tbody>
+      </table>
+    </div>
+
+    <h3>Chords</h3>
+    <p class="lede">The six right-hand chords are same-finger vertical pairs: one finger cannot
+      roll vertically at typing speed, so no ordinary letter sequence can produce them. Each is an
+      <em>alternate</em> home for a costly left-hand letter — reach for it when the left hand is
+      already busy, ignore it otherwise. The two left-hand chords are horizontal, between the
+      index and inner columns.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Press together</th><th>Gives</th><th>Finger</th><th>Window</th><th>Note</th></tr></thead>
+        <tbody id="combos"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>keyboards/crkbd/keymaps/vibranium_f — generated from the keycode arrays in keymap.c</footer>
+</div>
+
+<script>
+/* ---------------------------------------------------------------- data
+   Rows transcribed in QMK LAYOUT_split_3x5_3_ex2 order:
+     row0 / row1 : L[pinky ring mid index inner extra] R[extra inner index mid ring pinky]
+     row2        : L[pinky ring mid index inner]       R[inner index mid ring pinky]
+     thumbs      : L[outer mid inner]                  R[inner mid outer]
+   Key syntax: "TOP|SUB|roles".  roles: mod layer adapt trans none warn
+*/
+const T = "~|.|trans", X = "✕|.|none";
+
+const LAYERS = [
+{ n:0, id:"base", name:"Base — Vibranium-f", how:"default layer",
+  chords:{
+    v:[ {col:2,seam:0,out:"x"}, {col:2,seam:1,out:"f"},
+        {col:3,seam:0,out:"k"}, {col:3,seam:1,out:"v"},
+        {col:4,seam:0,out:"j"}, {col:4,seam:1,out:"s"} ],
+    h:[ {row:0,out:"z"}, {row:1,out:"q"} ]
+  },
+  notes:[
+    "Home rows are <code>S C N T</code> and <code>A E I H</code>; hold any of them for Alt Ctrl Gui Shift. Chordal Hold plus Flow Tap keep them out of the way during fast same-hand runs.",
+    "The index finger covers three columns on each hand — index, inner and extra. Only <code>h</code> sits on a pinky home key, on the right.",
+    "Two layer-taps survive on letters: <code>O</code> for Num on the right hand, <code>R</code> on the left inner thumb. Every other subhome hold was removed — a mistimed hold on a letter is the misfire that costs most."
+  ],
+  rows:[
+    ["X","W","M","G","J","Lang|osl|layer",   "Tab","↵|enter","Esc",". /",", ?","' \""],
+    ["S|alt|mod","C|ctrl|mod","N|gui|mod","T|shift|mod","K","Sys|hold|layer",
+     "Sys|hold|layer","Magic|adaptive|adapt","A|shift|mod","E|gui|mod","I|ctrl|mod","H|alt|mod"],
+    ["F","P","L","D","V",   "R","U","O|num|layer","Y","B"],
+    ["Caps|word","Arcane|accents|adapt","R|num|layer",   "Repeat|nav|adapt","Space|sym|layer","⌫|bspc"]
+  ]},
+
+{ n:1, id:"nav", name:"Nav / Edit", how:"hold Repeat — right inner thumb",
+  notes:[
+    "Arrows under the right home row, page and word motions flanking them. The left hand mirrors the home-row mods as plain modifiers, so you can hold Shift or Ctrl while navigating.",
+    "The right inner thumb becomes Alt-Repeat: it repeats the last key's complement rather than the key itself."
+  ],
+  rows:[
+    ["Undo","Cut","Copy","Paste","Save",T,   T,"PgUp","Home","↑","End","Del"],
+    ["Alt","Ctrl","Gui","Shift","Tab",T,   T,"PgDn","←","↓","→","⌫|bspc"],
+    ["Find","⇧Tab","Prev|tab","Next|tab","Alt|tab",   "Ins","← word","word →","Ctrl|⌫","Ctrl|del"],
+    [T,T,T,   "AltRep|adaptive|adapt",T,T]
+  ]},
+
+{ n:2, id:"sym", name:"Symbols", how:"hold Space — right middle thumb",
+  notes:[
+    "Shifted number row on the left. Brackets in matched pairs on the right: open on the home row, close on the bottom row directly below it.",
+    "<code>q</code> and <code>z</code> live here as a fallback — the fast way to reach them is the <code>T+K</code> and <code>J+G</code> chords."
+  ],
+  rows:[
+    ["!","@","#","$","%",T,   T,X,"q","|","\\","z"],
+    ["^","&","*","+","=",T,   T,"-","(","{","[","<"],
+    ["~","-","_",":",";",   "`",")","}","]",">"],
+    [T,T,T,   T,T,T]
+  ]},
+
+{ n:3, id:"num", name:"Numbers / Function", how:"hold R — left inner thumb — or hold O",
+  notes:[
+    "Numpad under the right hand, F1&ndash;F15 under the left. <code>F13 F14 F15</code> replaced the old duplicate <code>0 . =</code>: they are unbound in most desktops, which makes them clean targets for window-manager and app shortcuts.",
+    "Two ways in, on purpose. Left thumb when the right hand is typing digits; the right-hand <code>O</code> hold when the left hand is on the F-keys."
+  ],
+  rows:[
+    ["F1","F2","F3","F4","F5",T,   T,"/","7","8","9","-"],
+    ["F6","F7","F8","F9","F10",T,   T,"*","4","5","6","+"],
+    ["F11","F12","F13","F14","F15",   ".","1","2","3","0"],
+    [T,T,T,   T,T,T]
+  ]},
+
+{ n:4, id:"lang", name:"Language / Compose", how:"tap Lang — left extra column, top",
+  notes:[
+    "A one-shot layer: tap it, then tap the character. This is the explicit route — day to day the Arcane thumb key is faster, because it works from the letter you already typed.",
+    "Laid out by mark, one row each: acute, grave, diaeresis."
+  ],
+  rows:[
+    [T,T,"ñ","ç","ß",T,   T,"á","é","í","ó","ú"],
+    [T,T,"¿","·","€",T,   T,"à","è","ì","ò","ù"],
+    [T,T,"¡",T,T,   "ä","ë","ï","ö","ü"],
+    [T,T,T,   T,T,T]
+  ]},
+
+{ n:5, id:"sys", name:"System", how:"hold Sys — either extra column, home row",
+  notes:[
+    "Held from either half, so it is reachable whichever hand is free. Media and brightness on the left, transport on the right.",
+    "<code>Vibra</code> and <code>QWERTY</code> switch the persistent default layer. <code>Boot</code> sits on both extra columns and is the only destructive key on the board."
+  ],
+  rows:[
+    [X,X,"Vibra|default","QWERTY|default","Mouse|toggle","Boot|dfu|warn",
+     "Boot|dfu|warn","PrtSc","ScrLk","Pause",X,X],
+    ["Mute","Vol -","Vol +","Bright -","Bright +",T,   T,"⏮","⏯","⏭","⏹",X],
+    ["Combo|toggle",X,X,"NumLk","Compose",   "Swap|hands",X,X,X,X],
+    [T,T,T,   T,T,T]
+  ]},
+
+{ n:6, id:"mouse", name:"Mouse / Scroll", how:"toggle from Sys",
+  notes:[
+    "A toggle, not a hold — you are usually in it for a while. The same key that entered it, left inner column top, leaves it.",
+    "Pointer on the right home row, wheel above, buttons below. Everything else falls through, so modifiers and Space still work."
+  ],
+  rows:[
+    [T,T,T,T,"Mouse|toggle",T,   T,"Wh ←","Wh ↑","Wh →",T,T],
+    [T,T,T,T,T,T,   T,"←","↓","↑","→","R click"],
+    [T,T,T,T,T,   T,"L click","Wh ↓","M click",T],
+    [T,T,T,   T,T,T]
+  ]},
+
+{ n:7, id:"qwerty", name:"QWERTY rescue", how:"Sys → QWERTY — persistent",
+  notes:[
+    "For handing the keyboard to somebody else, or for software that reads raw scancodes and would be confused by Vibranium-f.",
+    "No home-row mods, no Magic, no chords — deliberately boring. Nav and Sym move to the thumbs so it still behaves like a 40-key board."
+  ],
+  rows:[
+    ["Q","W","E","R","T","Lang|osl|layer",   "Nav|hold|layer","Y","U","I","O","P"],
+    ["A","S","D","F","G","Sys|hold|layer",   "Sys|hold|layer","H","J","K","L",";"],
+    ["Z","X","C","V","B",   "N","M",",",".","/"],
+    ["Caps|word","Space","Nav|hold|layer",   "Sym|hold|layer","Space","⌫|bspc"]
+  ]}
+];
+
+/* Corne column stagger, in display order for each half */
+const STAG_L = [10, 4, -6, 0, 8, 14];
+const STAG_R = [14, 8, 0, -6, 4, 10];
+const COLS_L = ["pinky","ring","middle","index","inner","extra"];
+const COLS_R = ["extra","inner","index","middle","ring","pinky"];
+
+function keyEl(spec) {
+  const d = document.createElement("div");
+  d.className = "key";
+  if (spec === null) { d.className += " blank"; return d; }
+  const parts = String(spec).split("|");
+  const top = parts[0], sub = parts[1], roles = parts[2];
+  if (roles) roles.split(/\s+/).forEach(r => r && d.classList.add(r));
+  const t = document.createElement("div");
+  const n = [...top].length;
+  t.className = "t" + (n > 5 ? " long" : n > 2 ? " med" : "");
+  t.textContent = top === "~" ? "▽" : top;
+  d.appendChild(t);
+  if (sub && sub !== ".") {
+    const s = document.createElement("div");
+    s.className = "s";
+    s.textContent = sub;
+    d.appendChild(s);
+  }
+  return d;
+}
+
+function badge(out, cls, style) {
+  const b = document.createElement("div");
+  b.className = "chordbadge " + cls;
+  b.textContent = out;
+  Object.assign(b.style, style || {});
+  return b;
+}
+
+function board(rows, chords) {
+  const r0 = rows[0], r1 = rows[1], r2 = rows[2], th = rows[3];
+
+  //  left  half, display order pinky..extra : row2 has no extra key
+  const leftCols  = [0,1,2,3,4,5].map(i => [r0[i],     r1[i],     i === 5 ? null : r2[i]]);
+  //  right half, display order extra..pinky : row2 starts at index 5
+  const rightCols = [0,1,2,3,4,5].map(i => [r0[6 + i], r1[6 + i], i === 0 ? null : r2[4 + i]]);
+
+  const scroll = document.createElement("div");
+  scroll.className = "board-scroll";
+  const b = document.createElement("div");
+  b.className = "board";
+
+  const halves = document.createElement("div");
+  halves.className = "halves";
+  const halfEls = {};
+  [["L", leftCols, STAG_L], ["R", rightCols, STAG_R]].forEach(entry => {
+    const side = entry[0], cols = entry[1], stag = entry[2];
+    const h = document.createElement("div");
+    h.className = "half";
+    cols.forEach((col, i) => {
+      const c = document.createElement("div");
+      c.className = "col";
+      c.style.setProperty("--s", stag[i] + "px");
+      col.forEach(k => c.appendChild(keyEl(k)));
+      if (side === "R" && chords && chords.v) {
+        chords.v.filter(cd => cd.col === i).forEach(cd => {
+          c.appendChild(badge(cd.out, "cb-v seam" + cd.seam));
+        });
+      }
+      h.appendChild(c);
+    });
+    halfEls[side] = h;
+    halves.appendChild(h);
+  });
+
+  // left-hand horizontal chords, on the seam between the index and inner columns
+  if (chords && chords.h) {
+    chords.h.forEach(cd => {
+      const top = cd.row === 0
+        ? "calc(var(--key) / 2 + 4px)"
+        : "calc(var(--key) * 1.5 + var(--gap) + 4px)";
+      halfEls.L.appendChild(badge(cd.out, "cb-h", {
+        left: "calc(var(--key) * 4 + var(--gap) * 3.5)",
+        top: top
+      }));
+    });
+  }
+
+  b.appendChild(halves);
+
+  const trow = document.createElement("div");
+  trow.className = "thumbrow";
+  [[th[0], th[1], th[2]], [th[3], th[4], th[5]]].forEach(g => {
+    const gg = document.createElement("div");
+    gg.className = "tgroup";
+    g.forEach(k => gg.appendChild(keyEl(k)));
+    trow.appendChild(gg);
+  });
+  b.appendChild(trow);
+
+  scroll.appendChild(b);
+  return scroll;
+}
+
+function colNames() {
+  const f = document.createElement("div");
+  f.className = "colnames";
+  [COLS_L, COLS_R].forEach(names => {
+    const h = document.createElement("div");
+    h.className = "half";
+    names.forEach(n => {
+      const s = document.createElement("span");
+      s.textContent = n;
+      h.appendChild(s);
+    });
+    f.appendChild(h);
+  });
+  return f;
+}
+
+const out = document.getElementById("out");
+const nav = document.getElementById("nav");
+
+LAYERS.forEach(L => {
+  const a = document.createElement("a");
+  a.href = "#" + L.id;
+  a.innerHTML = '<span class="idx">' + L.n + '</span>&nbsp; ' + L.name.split(" — ")[0];
+  nav.appendChild(a);
+
+  const sec = document.createElement("section");
+  sec.className = "layer";
+  sec.id = L.id;
+
+  const head = document.createElement("div");
+  head.className = "lhead";
+  head.innerHTML = '<span class="lnum">' + L.n + '</span><h2>' + L.name +
+                   '</h2><span class="how">' + L.how + '</span>';
+  sec.appendChild(head);
+
+  const body = document.createElement("div");
+  body.className = "lbody";
+  const left = document.createElement("div");
+  if (L.n === 0) left.appendChild(colNames());
+  left.appendChild(board(L.rows, L.chords));
+  body.appendChild(left);
+
+  const aside = document.createElement("aside");
+  aside.className = "notes";
+  aside.innerHTML = L.notes.map(n => "<p>" + n + "</p>").join("");
+  body.appendChild(aside);
+
+  sec.appendChild(body);
+  out.appendChild(sec);
+});
+
+/* tables ------------------------------------------------------------ */
+const MAGIC = [
+  ["n","ng","0.631%","largest reduction in left-hand keystrokes available"],
+  ["m","mp","0.154%","best-scoring rule in all three languages"],
+  ["r","rs","0.298%","left-pinky relief; costs a little motion"],
+  ["t","ts","0.281%","replaced t→h, which cost more than every other rule earned"],
+  ["c","ck","0.158%","replaced c→h"],
+  ["l","ls","0.120%","carried by Catalan, where it is far more frequent"],
+  ["x","xp","0.037%","x sits on the worst key of the injured hand"],
+  ["d","dv","0.035%","advance, advice, advantage"],
+  ["w","wh","0.137%","kept — near-free, and long-standing muscle memory"],
+  ["g","gh","0.129%","kept — the cheapest of the six h-digraphs"],
+  ["p","ph","0.080%","kept"],
+  ["q","qu","—","q itself comes from the T+K chord"],
+  ["k","q","—","replacement, not append: keeps q off the symbol layer"],
+  ["n, then Magic again","n't","—","second press rewrites ng into n't"]
+];
+document.getElementById("magic").innerHTML = MAGIC.map(r =>
+  '<tr><td>' + r[0] + ' + Magic</td><td class="out">' + r[1] +
+  '</td><td class="num">' + r[2] + '</td><td class="note">' + r[3] + '</td></tr>').join("");
+
+const ARC = [
+  ["a","á","à","ä"], ["e","é","è","ë"],
+  ["i","í","ì","ï"], ["o","ó","ò","ö"],
+  ["u","ú","ù","ü"],
+  ["n","ñ","—","—"], ["c","ç","—","—"],
+  ["s","ß","—","—"],
+  ["1","¡","—","—"], ["?","¿","—","—"],
+  ["@","€","—","—"], [";","·","—","—"]
+];
+document.getElementById("arcane").innerHTML = ARC.map(r =>
+  '<tr><td>' + r[0] + ' + Arcane</td><td class="out">' + r[1] +
+  '</td><td class="out">' + r[2] + '</td><td class="out">' + r[3] + '</td></tr>').join("");
+
+const CB = [
+  ["Esc + A","k","right index","45 ms","harmless payload: Esc-then-a is the vim sequence most likely to misfire here"],
+  ["A + U","f","right index","45 ms","au is same-finger, so it cannot roll into the chord"],
+  [". / + E","x","right middle","45 ms","x deletes a char in vim, so it goes on the chord you never type by accident"],
+  ["E + O","v","right middle","45 ms",""],
+  [", ? + I","j","right ring","45 ms","top+home, not top+bottom — no two-row span"],
+  ["I + Y","s","right ring","45 ms","heaviest chord letter on the least-loaded right finger"],
+  ["J + G","z","left index","55 ms","horizontal, index and inner columns, top row"],
+  ["T + K","q","left index","55 ms","horizontal, home row — then q + Magic for qu"]
+];
+document.getElementById("combos").innerHTML = CB.map(r =>
+  '<tr><td>' + r[0] + '</td><td class="out">' + r[1] + '</td><td>' + r[2] +
+  '</td><td>' + r[3] + '</td><td class="note">' + r[4] + '</td></tr>').join("");
+</script>
+</body>
+</html>
