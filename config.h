@@ -11,4 +11,6 @@
 #define PERMISSIVE_HOLD
 #define CHORDAL_HOLD
 
-#define UNICODE_SELECTED_MODES UNICODE_MODE_LINUX, UNICODE_MODE_WINDOWS
+// No UNICODE_SELECTED_MODES: accented characters go out as Compose sequences
+// instead of Unicode codepoints. See the Compose block at the top of keymap.c
+// for why, and for the one xkb option this depends on.

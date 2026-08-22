@@ -17,10 +17,8 @@ enum layers {
 
 #define NAV     MO(_NAV)
 #define SYM     MO(_SYM)
-#define NUM     MO(_NUM)
 #define LANG    OSL(_LANG)
 #define SYS     MO(_SYS)
-#define MOUSE   MO(_MOUSE)
 #define MOUSE_TG TG(_MOUSE)
 #define VIBRA   PDF(_BASE)
 #define QWERTY  PDF(_QWERTY)
@@ -58,108 +56,111 @@ enum layers {
 #define C_DEL   C(KC_DEL)
 #define C_BSPC  C(KC_BSPC)
 
-#define R_NAV     LT(_NAV, KC_R)  // legacy alias, currently unused
 #define REP_NAV   LT(_NAV, KC_F24)
 
-// Thumb and subhome layer-tap keys.
-// Chordal Hold + Flow Tap should make these favor taps during same-hand / fast typing.
-#define R_NUM LT(_NUM, KC_R)
-#define SPC_SYM LT(_SYM, KC_SPC)
-#define D_NAV LT(_NAV, KC_D)
-#define V_SYM LT(_SYM, KC_V)
-#define L_NUM LT(_NUM, KC_L)
-#define O_NAV LT(_NAV, KC_O)
-#define U_SYM LT(_SYM, KC_U)
-#define Y_NUM LT(_NUM, KC_Y)
+// Layer-tap keys. Only the thumbs and one right-hand subhome key remain:
+// every other subhome layer-tap was removed because a mistimed hold on a
+// letter key is the misfire that hurts most.
+#define R_NUM   LT(_NUM, KC_R)    // left inner thumb
+#define SPC_SYM LT(_SYM, KC_SPC)  // right middle thumb
+#define O_NUM   LT(_NUM, KC_O)    // right-hand subhome access to _NUM
 
-// Unicode map
-enum unicode_names {
-    U_AACU, U_AACU_CAP,
-    U_EACU, U_EACU_CAP,
-    U_IACU, U_IACU_CAP,
-    U_OACU, U_OACU_CAP,
-    U_UACU, U_UACU_CAP,
+// -----------------------------------------------------------------------------
+// Compose sequences
+// -----------------------------------------------------------------------------
+// Accented characters used to go out as raw Unicode codepoints under
+// UNICODE_MODE_LINUX, which types Ctrl+Shift+U, then the hex digits, then
+// Enter -- and relies on an IBus daemon to swallow that and hand back one
+// character. There is no IBus on this machine: Wayland under Hyprland with
+// GTK_IM_MODULE/QT_IM_MODULE/XMODIFIERS all unset. So nothing intercepted the
+// chord. A terminal drops Shift when computing the control code, saw a bare
+// Ctrl+U, and ran readline's unix-line-discard -- hence the disappearing
+// lines -- and then the hex digits arrived as literal text.
+//
+// The Compose key is resolved by libxkbcommon inside each client, so it needs
+// no daemon and behaves the same in a terminal, a browser and an Electron app.
+// It is also three keycodes instead of ten, which closes the race between the
+// backspace and the character meant to replace it.
+//
+// REQUIRES `compose:menu` in the xkb options, which maps the Menu key to
+// Multi_key. Under home-manager:
+//
+//     wayland.windowManager.hyprland.settings.input.kb_options = "compose:menu";
+//
+// Every sequence below was taken from the system Compose file and assumes a
+// `us` base layout.
+#define COMPOSE KC_APP
 
-    U_AGRV, U_AGRV_CAP,
-    U_EGRV, U_EGRV_CAP,
-    U_IGRV, U_IGRV_CAP,
-    U_OGRV, U_OGRV_CAP,
-    U_UGRV, U_UGRV_CAP,
-
-    U_AUML, U_AUML_CAP,
-    U_EUML, U_EUML_CAP,
-    U_IUML, U_IUML_CAP,
-    U_OUML, U_OUML_CAP,
-    U_UUML, U_UUML_CAP,
-
-    U_ENYE, U_ENYE_CAP,
-    U_CCED, U_CCED_CAP,
-    U_ESZ,  U_ESZ_CAP,
-
-    U_IQUE,
-    U_IEXC,
-    U_EURO,
-    U_MDOT
+// How the uppercase form of a sequence is spelled.
+enum hd_compose_case {
+    HD_CASE_NONE,    // no uppercase form -- punctuation and symbols
+    HD_CASE_SECOND,  // shift the second key:  Compose ' A  -> A-acute
+    HD_CASE_BOTH     // shift both keys:       Compose S S  -> capital sharp s
 };
 
-const uint32_t PROGMEM unicode_map[] = {
-    [U_AACU] = 0x00E1, [U_AACU_CAP] = 0x00C1,
-    [U_EACU] = 0x00E9, [U_EACU_CAP] = 0x00C9,
-    [U_IACU] = 0x00ED, [U_IACU_CAP] = 0x00CD,
-    [U_OACU] = 0x00F3, [U_OACU_CAP] = 0x00D3,
-    [U_UACU] = 0x00FA, [U_UACU_CAP] = 0x00DA,
-
-    [U_AGRV] = 0x00E0, [U_AGRV_CAP] = 0x00C0,
-    [U_EGRV] = 0x00E8, [U_EGRV_CAP] = 0x00C8,
-    [U_IGRV] = 0x00EC, [U_IGRV_CAP] = 0x00CC,
-    [U_OGRV] = 0x00F2, [U_OGRV_CAP] = 0x00D2,
-    [U_UGRV] = 0x00F9, [U_UGRV_CAP] = 0x00D9,
-
-    [U_AUML] = 0x00E4, [U_AUML_CAP] = 0x00C4,
-    [U_EUML] = 0x00EB, [U_EUML_CAP] = 0x00CB,
-    [U_IUML] = 0x00EF, [U_IUML_CAP] = 0x00CF,
-    [U_OUML] = 0x00F6, [U_OUML_CAP] = 0x00D6,
-    [U_UUML] = 0x00FC, [U_UUML_CAP] = 0x00DC,
-
-    [U_ENYE] = 0x00F1, [U_ENYE_CAP] = 0x00D1,
-    [U_CCED] = 0x00E7, [U_CCED_CAP] = 0x00C7,
-    [U_ESZ]  = 0x00DF, [U_ESZ_CAP]  = 0x1E9E,
-
-    [U_IQUE] = 0x00BF,
-    [U_IEXC] = 0x00A1,
-    [U_EURO] = 0x20AC,
-    [U_MDOT] = 0x00B7
-};
+typedef struct {
+    uint16_t first;
+    uint16_t second;
+    uint8_t  cased;
+} hd_compose_seq_t;
 
 // Custom keycodes
 enum custom_keycodes {
-    HD_TH = SAFE_RANGE,
-    HD_CH,
-    HD_SH,
-    HD_WH,
-    HD_GH,
-    HD_PH,
-
-    P_DOT_SLSH,
+    P_DOT_SLSH = SAFE_RANGE,
     P_COMM_QUES,
     P_QUOT_DQUO,
 
-    // Legacy/custom punctuation keys referenced in process_record_user().
-    // They are not all used in the current keymap, but case labels must be defined.
-    P_DOT_COLN,
-    P_COMM_SCLN,
-    P_MINS_PLUS,
-    P_SLSH_QUES,
-
-    BORING,
-    CALM,
-    OS_MODE,
     HD_MAGIC,
-    HD_SKIP_MAGIC,
+    HD_ARCANE,
     SEL_WORD,
     SEL_LINE,
-    KILL_LINE
+    KILL_LINE,
+
+    // Compose characters, used by the Language layer. The accented vowels must
+    // stay as three blocks of five in a-e-i-o-u order: hd_accented_vowel_seq()
+    // indexes them arithmetically rather than switching on every combination.
+    XC_AACU, XC_EACU, XC_IACU, XC_OACU, XC_UACU,
+    XC_AGRV, XC_EGRV, XC_IGRV, XC_OGRV, XC_UGRV,
+    XC_AUML, XC_EUML, XC_IUML, XC_OUML, XC_UUML,
+
+    XC_ENYE, XC_CCED, XC_ESZ,
+    XC_IEXC, XC_IQUE, XC_EURO, XC_MDOT,
+    XC_LAST
 };
+
+#define XC_FIRST  XC_AACU
+#define HD_SEQ(xc) (&hd_compose_table[(xc) - XC_FIRST])
+
+static const hd_compose_seq_t hd_compose_table[XC_LAST - XC_FIRST] = {
+    [XC_AACU - XC_FIRST] = {KC_QUOT,    KC_A,       HD_CASE_SECOND},  // á Á   Compose ' a
+    [XC_EACU - XC_FIRST] = {KC_QUOT,    KC_E,       HD_CASE_SECOND},  // é É
+    [XC_IACU - XC_FIRST] = {KC_QUOT,    KC_I,       HD_CASE_SECOND},  // í Í
+    [XC_OACU - XC_FIRST] = {KC_QUOT,    KC_O,       HD_CASE_SECOND},  // ó Ó
+    [XC_UACU - XC_FIRST] = {KC_QUOT,    KC_U,       HD_CASE_SECOND},  // ú Ú
+
+    [XC_AGRV - XC_FIRST] = {KC_GRV,     KC_A,       HD_CASE_SECOND},  // à À   Compose ` a
+    [XC_EGRV - XC_FIRST] = {KC_GRV,     KC_E,       HD_CASE_SECOND},  // è È
+    [XC_IGRV - XC_FIRST] = {KC_GRV,     KC_I,       HD_CASE_SECOND},  // ì Ì
+    [XC_OGRV - XC_FIRST] = {KC_GRV,     KC_O,       HD_CASE_SECOND},  // ò Ò
+    [XC_UGRV - XC_FIRST] = {KC_GRV,     KC_U,       HD_CASE_SECOND},  // ù Ù
+
+    [XC_AUML - XC_FIRST] = {S(KC_QUOT), KC_A,       HD_CASE_SECOND},  // ä Ä   Compose " a
+    [XC_EUML - XC_FIRST] = {S(KC_QUOT), KC_E,       HD_CASE_SECOND},  // ë Ë
+    [XC_IUML - XC_FIRST] = {S(KC_QUOT), KC_I,       HD_CASE_SECOND},  // ï Ï
+    [XC_OUML - XC_FIRST] = {S(KC_QUOT), KC_O,       HD_CASE_SECOND},  // ö Ö
+    [XC_UUML - XC_FIRST] = {S(KC_QUOT), KC_U,       HD_CASE_SECOND},  // ü Ü
+
+    [XC_ENYE - XC_FIRST] = {S(KC_GRV),  KC_N,       HD_CASE_SECOND},  // ñ Ñ   Compose ~ n
+    [XC_CCED - XC_FIRST] = {KC_COMM,    KC_C,       HD_CASE_SECOND},  // ç Ç   Compose , c
+    [XC_ESZ  - XC_FIRST] = {KC_S,       KC_S,       HD_CASE_BOTH},    // ß ẞ   Compose s s
+    [XC_IEXC - XC_FIRST] = {S(KC_1),    S(KC_1),    HD_CASE_NONE},    // ¡     Compose ! !
+    [XC_IQUE - XC_FIRST] = {S(KC_SLSH), S(KC_SLSH), HD_CASE_NONE},    // ¿     Compose ? ?
+    [XC_EURO - XC_FIRST] = {KC_C,       KC_EQL,     HD_CASE_NONE},    // €     Compose c =
+    [XC_MDOT - XC_FIRST] = {KC_DOT,     KC_MINS,    HD_CASE_NONE}     // ·     Compose . -
+};
+
+_Static_assert(XC_AGRV - XC_AACU == 5 && XC_AUML - XC_AACU == 10,
+               "hd_accented_vowel_seq() indexes the accent blocks arithmetically");
 
 // Chordal Hold handedness
 // L/R mark true sides; thumbs are exempted with '*'
@@ -172,46 +173,69 @@ const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM =
     );
 
 // Combos
+//
+// The old h-digraph combos (TN/CN/SC/WM/GM/FP) are gone. They were horizontal
+// chords on adjacent fingers, which a normal letter roll can trigger by
+// accident; that is the misfire class this keymap no longer tolerates.
+//
+// What replaces them is a family of SAME-FINGER VERTICAL combos on the right
+// hand. One finger cannot roll vertically at typing speed, so no ordinary
+// letter sequence can produce them. Each one is an ALTERNATE home for a
+// left-hand letter that is expensive to reach, used at will when the left
+// hand is busy -- never a replacement for the base key.
 enum combo_events {
-    C_TH,
-    C_CH,
-    C_SH,
-    C_WH,
-    C_GH,
-    C_PH,
     C_Z,
-    C_QU
+    C_QU,
+    C_X,
+    C_F,
+    C_K,
+    C_V,
+    C_J,
+    C_S
 };
 
-const uint16_t PROGMEM th_combo[] = {HRM_T, HRM_N, COMBO_END}; // TN -> TH
-const uint16_t PROGMEM ch_combo[] = {HRM_C, HRM_N, COMBO_END}; // CN -> CH
-const uint16_t PROGMEM sh_combo[] = {HRM_S, HRM_C, COMBO_END}; // SC -> SH
-const uint16_t PROGMEM wh_combo[] = {KC_W,  KC_M,  COMBO_END}; // WM -> WH
-const uint16_t PROGMEM gh_combo[] = {KC_G,  KC_M,  COMBO_END}; // GM -> GH
-const uint16_t PROGMEM ph_combo[] = {KC_F,  KC_P,  COMBO_END}; // FP -> PH
-const uint16_t PROGMEM z_combo[]  = {KC_J,  KC_G,  COMBO_END}; // JG -> Z
-const uint16_t PROGMEM qu_combo[] = {HRM_T,  KC_K,  COMBO_END}; // TK -> Q only. Use q + Magic for qu.
+const uint16_t PROGMEM z_combo[]  = {KC_J,  KC_G, COMBO_END}; // JG -> Z
+const uint16_t PROGMEM qu_combo[] = {HRM_T, KC_K, COMBO_END}; // TK -> Q. Use q + Magic for qu.
+
+// Right-hand same-finger vertical combos: alternate homes for x s f j k v.
+//
+// x is on the MIDDLE finger, not the index, and that is deliberate. The index
+// pair is Esc+A, and "Esc then a" is one of the most common sequences in vim --
+// leave insert mode, append -- so that chord is the likeliest of the six to be
+// struck by accident. Its payload therefore has to be harmless: k just moves
+// the cursor up. x deletes a character in normal mode, so it lives on the
+// middle-finger pair instead, whose sequence (. then e) is one you essentially
+// never type. Swap these two back and a misfire eats your text.
+const uint16_t PROGMEM k_combo[] = {KC_ESC,      HRM_A, COMBO_END}; // index top+home
+const uint16_t PROGMEM f_combo[] = {HRM_A,       KC_U,  COMBO_END}; // index home+bot
+const uint16_t PROGMEM x_combo[] = {P_DOT_SLSH,  HRM_E, COMBO_END}; // mid   top+home
+const uint16_t PROGMEM v_combo[] = {HRM_E,       O_NUM, COMBO_END}; // mid   home+bot
+const uint16_t PROGMEM j_combo[] = {P_COMM_QUES, HRM_I, COMBO_END}; // ring  top+home
+const uint16_t PROGMEM s_combo[] = {HRM_I,       KC_Y,  COMBO_END}; // ring  home+bot
 
 combo_t key_combos[] = {
-    [C_TH] = COMBO(th_combo, HD_TH),
-    [C_CH] = COMBO(ch_combo, HD_CH),
-    [C_SH] = COMBO(sh_combo, HD_SH),
-    [C_WH] = COMBO(wh_combo, HD_WH),
-    [C_GH] = COMBO(gh_combo, HD_GH),
-    [C_PH] = COMBO(ph_combo, HD_PH),
-    [C_Z]  = COMBO(z_combo, KC_Z),
-    [C_QU] = COMBO(qu_combo, KC_Q)
+    [C_Z]  = COMBO(z_combo,  KC_Z),
+    [C_QU] = COMBO(qu_combo, KC_Q),
+    [C_X]  = COMBO(x_combo,  KC_X),
+    [C_F]  = COMBO(f_combo,  KC_F),
+    [C_K]  = COMBO(k_combo,  KC_K),
+    [C_V]  = COMBO(v_combo,  KC_V),
+    [C_J]  = COMBO(j_combo,  KC_J),
+    [C_S]  = COMBO(s_combo,  KC_S)
 };
 
 uint16_t get_combo_term(uint16_t combo_index, combo_t *combo) {
     switch (combo_index) {
-        case C_TH:
-        case C_CH:
-        case C_SH:
+        // Vertical combos. A same-finger pair typed as a sequence (au, eo)
+        // is inherently slow, so a short window keeps them out of the way
+        // while still being comfortable for a deliberate simultaneous press.
+        case C_X:
+        case C_F:
+        case C_K:
+        case C_V:
+        case C_J:
+        case C_S:
             return 45;
-        case C_WH:
-        case C_GH:
-        case C_PH:
         case C_Z:
         case C_QU:
             return 55;
@@ -293,19 +317,53 @@ bool shutdown_user(bool jump_to_bootloader) {
 
 // Helpers
 
-static bool boring_mode = false;
-static bool calm_mode = false;
-static bool os_windows_mode = false;
+// Caps Word capitalises with WEAK mods, and QMK clears those in action_exec()
+// (quantum/action.c:95-98) on every physical press, BEFORE the process_record
+// chain. Every custom keycode here then returns false, which skips
+// process_caps_word (quantum/quantum.c:355 vs :384 in one && chain), so the
+// weak Shift is never re-added. Net effect: mid-CAPS-WORD every completion came
+// out lowercase. Anything that emits a letter has to put the Shift back itself.
+static inline bool hd_caps_letter(uint16_t keycode) {
+    uint16_t basic = QK_MODS_GET_BASIC_KEYCODE(keycode);
+    return is_caps_word_on() && basic >= KC_A && basic <= KC_Z;
+}
 
-static bool lang_magic_enabled = false; // Disabled by default: avoids conflicts like c+Magic=ch vs c+Magic=ç.
+// Erase one character with NO modifiers live. tap_code() emits the CURRENT
+// report, so a held Ctrl turned the erase into Ctrl+Backspace and deleted an
+// entire WORD; Alt does the same in readline and GTK, and Super goes to the
+// compositor under Hyprland. Every replacement-style rule erases before it
+// emits, and while the emission helpers all stripped mods, the backspace in
+// front of them did not.
+static void hd_tap_bspc_unmodded(void) {
+    uint8_t mods         = get_mods();
+    uint8_t oneshot_mods = get_oneshot_mods();
+    uint8_t weak_mods    = get_weak_mods();
+
+    clear_mods();
+    clear_oneshot_mods();
+    clear_weak_mods();
+    send_keyboard_report();
+
+    tap_code(KC_BSPC);
+
+    set_mods(mods);
+    set_oneshot_mods(oneshot_mods);
+    set_weak_mods(weak_mods);
+    send_keyboard_report();
+}
 
 static void tap_code16_without_user_shift(uint16_t keycode) {
     uint8_t mods         = get_mods();
     uint8_t oneshot_mods = get_oneshot_mods();
+    uint8_t weak_mods    = get_weak_mods();
 
     // Remove only Shift; preserve Ctrl/Alt/Gui.
     set_mods(mods & ~MOD_MASK_SHIFT);
     set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+    // Re-apply Caps Word's shift by hand, but only to letters -- blanket-shifting
+    // would turn the punctuation keys' '.' into '>' and ',' into '<'.
+    set_weak_mods(hd_caps_letter(keycode) ? (weak_mods | MOD_BIT(KC_LSFT))
+                                          : (weak_mods & ~MOD_MASK_SHIFT));
     send_keyboard_report();
 
     tap_code16(keycode);
@@ -314,6 +372,7 @@ static void tap_code16_without_user_shift(uint16_t keycode) {
     // Do not restore one-shot Shift; this keypress has consumed it.
     set_mods(mods);
     set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+    set_weak_mods(weak_mods);
     send_keyboard_report();
 }
 
@@ -321,52 +380,95 @@ static inline bool hd_shifted(void) {
     return (get_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT;
 }
 
-static void send_hd_digraph(uint16_t first, uint16_t second) {
-    uint8_t mods         = get_mods();
-    uint8_t oneshot_mods = get_oneshot_mods();
-    bool shifted         = (mods | oneshot_mods) & MOD_MASK_SHIFT;
-
-    // Remove Shift temporarily, but preserve every other modifier.
-    set_mods(mods & ~MOD_MASK_SHIFT);
-    send_keyboard_report();
-    set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
-
-    if (shifted) {
-        tap_code16(S(first));   // uppercase only the first letter
-    } else {
-        tap_code16(first);
-    }
-
-    tap_code16(second);         // always unshifted
-
-    // Restore original modifier state.
-    set_mods(mods);
-    send_keyboard_report();
-    set_oneshot_mods(oneshot_mods);
-}
-
-
+// Literal-string emission. Weak mods are stripped too: a leaked Caps Word Shift
+// would rewrite the punctuation inside the string ("'t" becomes '"t'). Callers
+// that want an uppercase form pass one -- see hd_magic_word_brief().
 static void hd_send_string_unshifted(const char *str) {
     uint8_t mods = get_mods();
     uint8_t oneshot_mods = get_oneshot_mods();
+    uint8_t weak_mods = get_weak_mods();
     set_mods(mods & ~MOD_MASK_SHIFT);
     set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+    set_weak_mods(weak_mods & ~MOD_MASK_SHIFT);
     send_keyboard_report();
     send_string(str);
     set_mods(mods);
     set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+    set_weak_mods(weak_mods);
     send_keyboard_report();
 }
 
+// Emit one Compose sequence. Every modifier is stripped for the whole run,
+// not just Shift: xkbcommon matches on the character each keypress produces,
+// so a held Shift turns ' into " and a held Ctrl suppresses the character
+// altogether. Either one breaks the match silently and leaves the Compose key
+// armed, swallowing whatever is typed next.
+static void hd_compose_send(const hd_compose_seq_t *seq, bool shifted) {
+    if (seq == NULL) {
+        return;
+    }
+
+    uint16_t first  = seq->first;
+    uint16_t second = seq->second;
+    if (shifted && seq->cased != HD_CASE_NONE) {
+        second = S(second);
+        if (seq->cased == HD_CASE_BOTH) {
+            first = S(first);
+        }
+    }
+
+    uint8_t mods         = get_mods();
+    uint8_t oneshot_mods = get_oneshot_mods();
+    uint8_t weak_mods    = get_weak_mods();
+    clear_mods();
+    clear_oneshot_mods();
+    // WEAK mods matter here too, and this is the one place where missing them
+    // ate a character. Caps Word's weak Shift turned the ',' of "Compose , c"
+    // into '<'; <Compose> < C matches no sequence, so xkbcommon aborted it --
+    // and the trigger letter had already been backspaced away. Silent swallow,
+    // exactly what the comment above says this function exists to prevent.
+    clear_weak_mods();
+    send_keyboard_report();
+
+    tap_code(COMPOSE);
+    tap_code16(first);
+    tap_code16(second);
+
+    // Restore held physical mods. Do not restore one-shot Shift; this
+    // character has consumed it.
+    set_mods(mods);
+    set_oneshot_mods(oneshot_mods & ~MOD_MASK_SHIFT);
+    set_weak_mods(weak_mods);
+    send_keyboard_report();
+}
+
+// step 0 acute, 1 grave, 2 diaeresis -- the three blocks of five in the table.
+static const hd_compose_seq_t *hd_accented_vowel_seq(uint16_t base, uint8_t step) {
+    uint8_t vowel;
+    switch (base) {
+        case KC_A: vowel = 0; break;
+        case KC_E: vowel = 1; break;
+        case KC_I: vowel = 2; break;
+        case KC_O: vowel = 3; break;
+        case KC_U: vowel = 4; break;
+        default:   return NULL;
+    }
+    return &hd_compose_table[(step % 3) * 5 + vowel];
+}
+
 // -----------------------------------------------------------------------------
-// Magic / Skip Magic history
+// Key history shared by Magic and Arcane
 // -----------------------------------------------------------------------------
+// Both keys read the same "what did you type last" state. hd_magic_pending
+// holds a tap-hold key that QMK has not resolved yet, so a fast letter + Magic
+// still finds its trigger.
 
 static uint16_t hd_magic_last = KC_NO;
-static uint16_t hd_magic_prev = KC_NO;
 static uint16_t hd_lang_cycle_key = KC_NO;
 static uint8_t hd_lang_cycle_step = 0;
 static bool hd_lang_cycle_active = false;
+static bool hd_lang_cycle_shifted = false;
+static uint16_t hd_magic_cycle_key = KC_NO;
 
 #define HD_MAGIC_PENDING_TERM 220
 
@@ -374,20 +476,31 @@ static uint16_t hd_magic_pending = KC_NO;
 static uint16_t hd_magic_pending_timer = 0;
 static bool     hd_magic_pending_consumed = false;
 static uint8_t  hd_magic_last_mods = 0;
-static uint8_t  hd_magic_prev_mods = 0;
 static uint8_t  hd_magic_pending_mods = 0;
 
 static void hd_magic_clear_history(void) {
     hd_magic_last = KC_NO;
-    hd_magic_prev = KC_NO;
     hd_magic_pending = KC_NO;
     hd_magic_pending_consumed = false;
     hd_magic_last_mods = 0;
-    hd_magic_prev_mods = 0;
     hd_magic_pending_mods = 0;
     hd_lang_cycle_key = KC_NO;
     hd_lang_cycle_step = 0;
     hd_lang_cycle_active = false;
+    hd_lang_cycle_shifted = false;
+    hd_magic_cycle_key = KC_NO;
+}
+
+// Drop a pending trigger outright. Deliberately NOT folded into
+// hd_magic_push(): push also runs from inside the emission helpers, and
+// clearing there would stop hd_should_suppress_consumed_pending() from
+// recognising the release of the key the completion just consumed -- which
+// would then push the trigger letter back over the completion and disarm the
+// step-2 cycle. Only a genuinely newer keystroke may invalidate a pending.
+static void hd_magic_forget_pending(void) {
+    hd_magic_pending = KC_NO;
+    hd_magic_pending_consumed = false;
+    hd_magic_pending_mods = 0;
 }
 
 static void hd_magic_set_pending(uint16_t keycode) {
@@ -403,7 +516,18 @@ static void hd_magic_set_pending(uint16_t keycode) {
 static uint16_t hd_normalize_history_key(uint16_t keycode);
 
 static uint16_t hd_magic_get_trigger(bool *used_pending) {
-    if (hd_magic_pending != KC_NO && timer_elapsed(hd_magic_pending_timer) <= HD_MAGIC_PENDING_TERM) {
+    // hd_magic_consume_pending() only sets the consumed flag; it deliberately
+    // leaves hd_magic_pending alone so the tap-hold release path can still
+    // recognise and suppress it. That makes checking the flag here mandatory.
+    // Without it a pending trigger stays live for the rest of its 220 ms and a
+    // SECOND Magic re-reads it instead of the completion that was just emitted:
+    // n + Magic + Magic returned "ngg" rather than "n't", because the step-2
+    // test wants trigger == KC_G and kept seeing KC_N. Same for t/l/r ("tss",
+    // "lss", "rss"). The timer runs from the LETTER press, not from the first
+    // Magic, so whether step 2 worked was decided by how fast the pair was
+    // typed -- a race, in the one feature that is supposed to be timer-free.
+    if (hd_magic_pending != KC_NO && !hd_magic_pending_consumed &&
+        timer_elapsed(hd_magic_pending_timer) <= HD_MAGIC_PENDING_TERM) {
         if (used_pending) {
             *used_pending = true;
         }
@@ -435,18 +559,22 @@ static bool hd_should_suppress_consumed_pending(uint16_t keycode) {
 
 static bool hd_magic_trigger_shifted(bool used_pending) {
     uint8_t trigger_mods = used_pending ? hd_magic_pending_mods : hd_magic_last_mods;
-    return ((trigger_mods | get_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT) != 0;
+    // is_caps_word_on() has to be consulted explicitly: Caps Word's shift is a
+    // WEAK mod and QMK has already cleared it by the time this runs. Without
+    // it, k + Magic mid-CAPS-WORD replaced the K with a lowercase q, and
+    // n + Arcane gave a lowercase enye.
+    return is_caps_word_on() ||
+           ((trigger_mods | get_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT) != 0;
 }
 
 static void hd_magic_push(uint16_t keycode) {
     if (keycode == KC_NO) {
         return;
     }
-    hd_magic_prev = hd_magic_last;
-    hd_magic_prev_mods = hd_magic_last_mods;
     hd_magic_last = keycode;
     hd_magic_last_mods = get_mods() | get_oneshot_mods();
     hd_lang_cycle_active = false;
+    hd_magic_cycle_key = KC_NO;
 }
 
 static uint16_t hd_normalize_history_key(uint16_t keycode) {
@@ -461,14 +589,9 @@ static uint16_t hd_normalize_history_key(uint16_t keycode) {
         case HRM_I: return KC_I;
         case HRM_H: return KC_H;
 
-        // Subhome / thumb layer-tap keys.
+        // Remaining layer-tap keys.
         case R_NUM: return KC_R;
-        case D_NAV: return KC_D;
-        case V_SYM: return KC_V;
-        case L_NUM: return KC_L;
-        case O_NAV: return KC_O;
-        case U_SYM: return KC_U;
-        case Y_NUM: return KC_Y;
+        case O_NUM: return KC_O;
         case SPC_SYM: return KC_SPC;
 
         // Letters.
@@ -623,112 +746,41 @@ static bool hd_magic_send(uint16_t keycode) {
     return true;
 }
 
-static bool hd_magic_send_unicode(uint32_t codepoint, uint16_t history_key) {
-    register_unicode(codepoint);
-    hd_magic_push(history_key);
-    return true;
-}
-
-static bool hd_send_accented_vowel(uint16_t base, uint8_t step, bool shifted) {
-    switch (base) {
-        case KC_A:
-            return hd_magic_send_unicode(step == 0 ? (shifted ? 0x00C1 : 0x00E1) : step == 1 ? (shifted ? 0x00C0 : 0x00E0) : (shifted ? 0x00C4 : 0x00E4), KC_A);
-        case KC_E:
-            return hd_magic_send_unicode(step == 0 ? (shifted ? 0x00C9 : 0x00E9) : step == 1 ? (shifted ? 0x00C8 : 0x00E8) : (shifted ? 0x00CB : 0x00EB), KC_E);
-        case KC_I:
-            return hd_magic_send_unicode(step == 0 ? (shifted ? 0x00CD : 0x00ED) : step == 1 ? (shifted ? 0x00CC : 0x00EC) : (shifted ? 0x00CF : 0x00EF), KC_I);
-        case KC_O:
-            return hd_magic_send_unicode(step == 0 ? (shifted ? 0x00D3 : 0x00F3) : step == 1 ? (shifted ? 0x00D2 : 0x00F2) : (shifted ? 0x00D6 : 0x00F6), KC_O);
-        case KC_U:
-            return hd_magic_send_unicode(step == 0 ? (shifted ? 0x00DA : 0x00FA) : step == 1 ? (shifted ? 0x00D9 : 0x00F9) : (shifted ? 0x00DC : 0x00FC), KC_U);
-    }
-    return false;
-}
-
-static bool hd_do_lang_magic(void) {
-    bool shifted = hd_shifted();
-
-    switch (hd_magic_last) {
-        case KC_N: return hd_magic_send_unicode(shifted ? 0x00D1 : 0x00F1, KC_N); // ñ/Ñ
-        case KC_C: return hd_magic_send_unicode(shifted ? 0x00C7 : 0x00E7, KC_C); // ç/Ç
-        case KC_S: return hd_magic_send_unicode(shifted ? 0x1E9E : 0x00DF, KC_S); // ß/ẞ
-        case KC_1: return hd_magic_send_unicode(0x00A1, KC_1);                  // ¡
-        case KC_SLSH: return hd_magic_send_unicode(0x00BF, KC_SLSH);            // ¿
-        case KC_DOT: return hd_magic_send_unicode(0x00B7, KC_DOT);              // ·
-    }
-
-    switch (hd_magic_last) {
-        case KC_A: case KC_E: case KC_I: case KC_O: case KC_U: {
-            uint16_t base = hd_magic_last;
-            if (hd_lang_cycle_active && hd_lang_cycle_key == base) {
-                tap_code(KC_BSPC);
-                hd_lang_cycle_step = (hd_lang_cycle_step + 1) % 3;
-            } else {
-                hd_lang_cycle_key = base;
-                hd_lang_cycle_step = 0;
-            }
-
-            bool ok = hd_send_accented_vowel(base, hd_lang_cycle_step, shifted);
-            if (ok) {
-                // hd_magic_push() resets the cycle flag, so restore it after sending.
-                hd_lang_cycle_key = base;
-                hd_lang_cycle_active = true;
-            }
-            return ok;
-        }
-    }
-
-    return false;
-}
-
-
 // -----------------------------------------------------------------------------
-// Direct Language Magic on the normal Magic key
+// Arcane: the dedicated accent key (left middle thumb)
 // -----------------------------------------------------------------------------
-// Conflict policy:
-// - c/s keep ch/sh, so ç/ß move to x/z.
-// - n keeps n't, so ñ moves to y.
-// - i + Magic becomes "I" only in standalone-I context; otherwise it becomes í/ì/ï.
-// - Vowels cycle acute -> grave -> umlaut on repeated Magic.
+// Accents used to ride on Magic, which forced a chain of proxy triggers
+// (x -> ç, y -> ñ, z -> ß) to dodge collisions with the letter rules, and it
+// put the whole accent load behind a right-index key. A separate key removes
+// every collision: the natural trigger works directly.
+//
+//   a/e/i/o/u + Arcane -> á é í ó ú, again -> à è ì ò ù, again -> ä ë ï ö ü
+//   n + Arcane -> ñ      c + Arcane -> ç      s + Arcane -> ß
+//   1 + Arcane -> ¡      ? + Arcane -> ¿      @ + Arcane -> €    ; + Arcane -> ·
+//
+// The cycle is timer-free: it advances only because the previous key was also
+// Arcane on the same trigger, so it can never stall or fire on its own.
 
-static uint32_t hd_accented_vowel_codepoint(uint16_t base, uint8_t step, bool shifted) {
-    switch (base) {
-        case KC_A:
-            return step == 0 ? (shifted ? 0x00C1 : 0x00E1) : step == 1 ? (shifted ? 0x00C0 : 0x00E0) : (shifted ? 0x00C4 : 0x00E4);
-        case KC_E:
-            return step == 0 ? (shifted ? 0x00C9 : 0x00E9) : step == 1 ? (shifted ? 0x00C8 : 0x00E8) : (shifted ? 0x00CB : 0x00EB);
-        case KC_I:
-            return step == 0 ? (shifted ? 0x00CD : 0x00ED) : step == 1 ? (shifted ? 0x00CC : 0x00EC) : (shifted ? 0x00CF : 0x00EF);
-        case KC_O:
-            return step == 0 ? (shifted ? 0x00D3 : 0x00F3) : step == 1 ? (shifted ? 0x00D2 : 0x00F2) : (shifted ? 0x00D6 : 0x00F6);
-        case KC_U:
-            return step == 0 ? (shifted ? 0x00DA : 0x00FA) : step == 1 ? (shifted ? 0x00D9 : 0x00F9) : (shifted ? 0x00DC : 0x00FC);
-    }
-    return 0;
-}
-
-static bool hd_i_magic_is_pronoun_context(bool used_pending) {
-    // Keep i + Magic dedicated to accented vowels for now. The English "I"
-    // brief was useful in theory, but multilingual typing benefits more from
-    // making í/ì/ï deterministic and conflict-free.
-    (void)used_pending;
-    return false;
-}
-
-static bool hd_magic_send_unicode_replace_or_pending(uint32_t codepoint, uint16_t history_key, bool used_pending) {
-    if (codepoint == 0) {
+static bool hd_magic_send_compose_replace_or_pending(const hd_compose_seq_t *seq, bool shifted, uint16_t history_key, bool used_pending) {
+    if (seq == NULL) {
         return false;
     }
 
-    // Direct language Magic is replacement-style: x+Magic should become ç,
-    // y+Magic should become ñ, etc. In this QMK/tap-hold timing, even a
-    // "pending" tap-hold letter is usually already emitted by the time Magic
-    // runs, so always erase the plain trigger before sending Unicode.
-    tap_code(KC_BSPC);
+    // Arcane is replacement-style: n+Arcane becomes ñ, not nñ. In this
+    // QMK/tap-hold timing even a "pending" tap-hold letter is usually already
+    // emitted by the time Arcane runs, so always erase the plain trigger
+    // before composing.
+    hd_tap_bspc_unmodded();
 
-    register_unicode(codepoint);
+    hd_compose_send(seq, shifted);
     hd_magic_push(history_key);
     hd_repeat_remember(history_key);
+
+    // Arm the same repeat guard the vowel cycle uses, so a second Arcane on
+    // this trigger is a no-op rather than a re-emit. hd_magic_push() clears
+    // these, so it has to happen after it. See hd_do_arcane().
+    hd_lang_cycle_key    = history_key;
+    hd_lang_cycle_active = true;
 
     if (used_pending) {
         hd_magic_consume_pending();
@@ -737,8 +789,53 @@ static bool hd_magic_send_unicode_replace_or_pending(uint32_t codepoint, uint16_
     return true;
 }
 
+// Word briefs: Space + Magic emits a whole word.
+//
+// This is the one rule whose trigger is a CONTEXT (word-initial) rather than a
+// prefix of what it emits, so it lives apart from the letter tables. Only "the"
+// earns it, and it is a genuine free lunch: EN dMot -0.35 AND dLeft -0.71pp,
+// negative on both axes, which almost nothing else on the board manages. It is
+// also the most common word in English, so there is nothing to memorise.
+//
+// It does NOT make space a decision point -- space alone is untouched; the word
+// only appears if Magic follows. Idle in Spanish and Catalan, which costs
+// nothing.
+//
+// hd_magic_cycle_key is armed afterwards so a second Magic is inert. Without
+// that, history would sit on the 'e' of "the" and the next Magic would fire
+// e -> "es", giving "thees". Arming it is also how a step 2 would be added
+// later: test cycle_key == KC_SPC the way the n't rule tests KC_N.
+static bool hd_magic_word_brief(uint16_t trigger, bool used_pending) {
+    if (trigger != KC_SPC) {
+        return false;
+    }
+
+    // Pass the cased form rather than shifting the emission: a weak Shift
+    // applied across a string would also rewrite any punctuation in it.
+    hd_send_string_unshifted(is_caps_word_on() ? "THE" : "the");
+    hd_magic_push(KC_E);
+    hd_repeat_remember(KC_E);
+    hd_magic_cycle_key = KC_SPC;
+
+    if (used_pending) {
+        hd_magic_consume_pending();
+    }
+    return true;
+}
+
+// Append-style, like hd_magic_send, but for a two-letter cluster. The LAST
+// letter becomes the history key, matching what hd_magic_send does with its
+// single keycode.
+static bool hd_magic_send2(uint16_t first, uint16_t second) {
+    tap_code16_without_user_shift(first);
+    tap_code16_without_user_shift(second);
+    hd_magic_push(hd_normalize_history_key(second));
+    hd_repeat_remember(second);
+    return true;
+}
+
 static bool hd_magic_replace_with_key(uint16_t keycode, uint16_t history_key, bool used_pending) {
-    tap_code(KC_BSPC);
+    hd_tap_bspc_unmodded();
     tap_code16_without_user_shift(keycode);
     hd_magic_push(history_key);
     hd_repeat_remember(keycode);
@@ -750,39 +847,41 @@ static bool hd_magic_replace_with_key(uint16_t keycode, uint16_t history_key, bo
     return true;
 }
 
-static bool hd_magic_vowel(uint16_t base, bool used_pending) {
-    if (base != KC_A && base != KC_E && base != KC_I && base != KC_O && base != KC_U) {
+static inline bool hd_is_arcane_vowel(uint16_t kc) {
+    return kc == KC_A || kc == KC_E || kc == KC_I || kc == KC_O || kc == KC_U;
+}
+
+static bool hd_arcane_vowel(uint16_t base, bool used_pending) {
+    if (!hd_is_arcane_vowel(base)) {
         return false;
     }
 
-    if (base == KC_I && hd_i_magic_is_pronoun_context(used_pending)) {
-        // i + Magic -> I in English-pronoun context. Replacement-style:
-        // erase the emitted i, then send I.
-        tap_code(KC_BSPC);
-        tap_code16_without_user_shift(S(KC_I));
-        hd_magic_push(KC_I);
-        hd_repeat_remember(S(KC_I));
-        if (used_pending) {
-            hd_magic_consume_pending();
-        }
-        return true;
-    }
-
     if (hd_lang_cycle_active && hd_lang_cycle_key == base) {
-        // Repeated Magic cycles the accent and replaces the previous accented vowel.
-        tap_code(KC_BSPC);
+        // Repeated Arcane cycles the accent and replaces the previous one.
+        hd_tap_bspc_unmodded();
         hd_lang_cycle_step = (hd_lang_cycle_step + 1) % 3;
+        // Do NOT re-derive the case here. hd_magic_push() below has already
+        // overwritten hd_magic_last_mods with whatever was held when the
+        // previous accent went out, and the Shift that capitalised the
+        // trigger was released long before this second press -- so A would
+        // give A-acute, then a-grave, then a-diaeresis. The case belongs to
+        // the cycle, not to the individual press. A Shift deliberately held
+        // during a cycling press can still force upper.
+        hd_lang_cycle_shifted |= hd_shifted();
     } else {
         hd_lang_cycle_key = base;
         hd_lang_cycle_step = 0;
-        // First Magic replaces the already-emitted plain vowel. This also
+        // Latch the case while the trigger's own mods are still on record.
+        // This must happen before hd_magic_push() clobbers them below.
+        hd_lang_cycle_shifted = hd_magic_trigger_shifted(used_pending);
+        // First Arcane replaces the already-emitted plain vowel. This also
         // applies to pending HRM/layer-tap vowels because QMK has usually
-        // emitted the tap before Magic runs.
-        tap_code(KC_BSPC);
+        // emitted the tap before Arcane runs.
+        hd_tap_bspc_unmodded();
     }
 
-    uint32_t cp = hd_accented_vowel_codepoint(base, hd_lang_cycle_step, hd_magic_trigger_shifted(used_pending));
-    register_unicode(cp);
+    hd_compose_send(hd_accented_vowel_seq(base, hd_lang_cycle_step),
+                    hd_lang_cycle_shifted);
 
     hd_magic_push(base);
     hd_lang_cycle_key = base;
@@ -796,144 +895,205 @@ static bool hd_magic_vowel(uint16_t base, bool used_pending) {
     return true;
 }
 
-static bool hd_do_direct_language_magic(uint16_t trigger, bool used_pending) {
-    switch (trigger) {
-        case KC_A:
-        case KC_E:
-        case KC_I:
-        case KC_O:
-        case KC_U:
-            return hd_magic_vowel(trigger, used_pending);
-
-        case KC_K:
-            return hd_magic_replace_with_key(hd_magic_trigger_shifted(used_pending) ? S(KC_Q) : KC_Q, KC_Q, used_pending); // k + Magic -> q/Q
-
-        case KC_Y:
-            return hd_magic_send_unicode_replace_or_pending(hd_magic_trigger_shifted(used_pending) ? 0x00D1 : 0x00F1, KC_N, used_pending); // y + Magic -> ñ/Ñ
-        case KC_X:
-            return hd_magic_send_unicode_replace_or_pending(hd_magic_trigger_shifted(used_pending) ? 0x00C7 : 0x00E7, KC_C, used_pending); // x + Magic -> ç/Ç
-        case KC_Z:
-            return hd_magic_send_unicode_replace_or_pending(hd_magic_trigger_shifted(used_pending) ? 0x1E9E : 0x00DF, KC_S, used_pending); // z + Magic -> ß/ẞ
-
-        case KC_1:
-            return hd_magic_send_unicode_replace_or_pending(0x00A1, KC_1, used_pending);       // 1 + Magic -> ¡
-        case S(KC_SLSH):
-            return hd_magic_send_unicode_replace_or_pending(0x00BF, KC_SLSH, used_pending);    // ? + Magic -> ¿
-        case S(KC_2):
-            return hd_magic_send_unicode_replace_or_pending(0x20AC, S(KC_2), used_pending);    // @ + Magic -> €
-        case KC_SCLN:
-            return hd_magic_send_unicode_replace_or_pending(0x00B7, KC_DOT, used_pending);     // ; + Magic -> ·
-    }
-
-    return false;
-}
-
-static bool hd_do_base_magic(void) {
-    if (boring_mode) {
-        return false;
-    }
-
+static bool hd_do_arcane(void) {
     bool used_pending = false;
     uint16_t trigger = hd_magic_get_trigger(&used_pending);
     if (trigger == KC_NO) {
         return false;
     }
 
-    // Language Magic is disabled by default because normal Magic already uses
-    // c/s/n/vowels for digraphs and briefs. Keep it behind an explicit flag for later.
-    if (lang_magic_enabled && IS_LAYER_ON(_LANG)) {
-        return hd_do_lang_magic();
-    }
-
-    // Direct language Magic lives on the normal Magic key and avoids conflicts
-    // by using proxy triggers where normal Magic already has a high-value rule.
-    // Keep c/s/n for ch/sh/n't; use x/z/y for ç/ß/ñ.
-    if (hd_do_direct_language_magic(trigger, used_pending)) {
+    // A second Arcane on a non-vowel has nothing to cycle to. Without this it
+    // would backspace the character it just produced and re-emit it -- and
+    // re-derive the case from mods that are no longer held, so a deliberate
+    // N-tilde would silently downgrade to n-tilde on the next press. Consume
+    // the press and leave the character alone.
+    if (hd_lang_cycle_active && hd_lang_cycle_key == trigger && !hd_is_arcane_vowel(trigger)) {
         return true;
     }
 
-    // Pending Magic uses the still-held tap-hold key only as a trigger.
-    // In this keymap/QMK timing, the base tap is often already emitted by the
-    // time Magic runs. Therefore pending Magic must send only the completion,
-    // not the whole digraph/snippet, or fast t+Magic becomes tth.
-    if (used_pending) {
-        switch (trigger) {
-            case KC_T:
-            case KC_C:
-            case KC_S:
-            case KC_W:
-            case KC_G:
-            case KC_P:
-                hd_magic_send(KC_H);      // pending t/c/s/w/g/p + Magic -> add h
-                hd_magic_consume_pending();
-                return true;
-            case KC_I:
-                // pending i + Magic -> I. The base i has usually already been
-                // emitted, so replace it just like the non-pending path.
-                tap_code(KC_BSPC);
-                tap_code16(S(KC_I));
-                hd_magic_push(KC_I);
-                hd_repeat_remember(S(KC_I));
-                hd_magic_consume_pending();
-                return true;
-            case KC_N:
-                hd_send_string_unshifted("'t");       // pending n + Magic -> n't
-                hd_magic_push(KC_T);
-                hd_repeat_remember(KC_T);
-                hd_magic_consume_pending();
-                return true;
-            case KC_H:
-                hd_send_string_unshifted("ave");      // pending h + Magic -> have
-                hd_magic_push(KC_E);
-                hd_repeat_remember(KC_E);
-                hd_magic_consume_pending();
-                return true;
-            case KC_SPC:
-                hd_send_string_unshifted("the");      // pending Space + Magic -> " the"
-                hd_magic_push(KC_E);
-                hd_repeat_remember(KC_E);
-                hd_magic_consume_pending();
-                return true;
-        }
-    }
+    bool shifted = hd_magic_trigger_shifted(used_pending);
 
-    // Non-pending Magic: the trigger key has already been emitted, so append
-    // only the completion or replace the already-emitted trigger where needed.
     switch (trigger) {
-        case KC_Q:
-            return hd_magic_send(KC_U); // q + Magic -> qu
-        case KC_T:
+        case KC_A:
+        case KC_E:
+        case KC_I:
+        case KC_O:
+        case KC_U:
+            return hd_arcane_vowel(trigger, used_pending);
+
+        case KC_N:
+            return hd_magic_send_compose_replace_or_pending(HD_SEQ(XC_ENYE), shifted, KC_N, used_pending);    // ñ/Ñ
         case KC_C:
+            return hd_magic_send_compose_replace_or_pending(HD_SEQ(XC_CCED), shifted, KC_C, used_pending);    // ç/Ç
         case KC_S:
-        case KC_W:
-        case KC_G:
-        case KC_P:
-            return hd_magic_send(KC_H); // H-digraph Magic
+            return hd_magic_send_compose_replace_or_pending(HD_SEQ(XC_ESZ),  shifted, KC_S, used_pending);    // ß/ẞ
+
+        case KC_1:
+            return hd_magic_send_compose_replace_or_pending(HD_SEQ(XC_IEXC), false, KC_1, used_pending);      // ¡
+        case S(KC_SLSH):
+            return hd_magic_send_compose_replace_or_pending(HD_SEQ(XC_IQUE), false, KC_SLSH, used_pending);   // ¿
+        case S(KC_2):
+            return hd_magic_send_compose_replace_or_pending(HD_SEQ(XC_EURO), false, S(KC_2), used_pending);   // €
+        case KC_SCLN:
+        case KC_DOT:
+            return hd_magic_send_compose_replace_or_pending(HD_SEQ(XC_MDOT), false, KC_DOT, used_pending);    // ·
     }
 
-    if (calm_mode) {
+    return false;
+}
+
+// Letter completions, chosen by measured value on an EN/ES/CA corpus rather
+// than by feel. Every rule below either removes motion cost or removes a
+// left-hand keystroke; the ones that did neither were cut.
+//
+//   n + Magic -> g   ng   the single largest left-hand relief available
+//   m + Magic -> p   mp   best rule in all three languages
+//   t + Magic -> s   ts
+//   c + Magic -> k   ck
+//   l + Magic -> s   ls   Catalan leans hard on this one
+//   r + Magic -> s   rs   pinky relief; costs a little motion
+//   x + Magic -> p   xp
+//   d + Magic -> v   dv
+//   w/g/p + Magic -> h    the three h-digraphs that are close to free
+//   q + Magic -> u   qu
+//
+// t/c/s + Magic -> h were dropped. h lives on the RIGHT pinky home key, so
+// those rules never unloaded the left hand at all, and the Magic -> next
+// transition they force (Magic and a share the right index; Magic to e is a
+// stretch) cost more motion than every other rule here earns combined.
+static uint16_t hd_magic_completion(uint16_t trigger) {
+    switch (trigger) {
+        case KC_N: return KC_G;
+        case KC_M: return KC_P;
+        case KC_T: return KC_S;
+        case KC_C: return KC_K;
+        case KC_L: return KC_S;
+        case KC_R: return KC_S;
+        case KC_X: return KC_P;
+        case KC_D: return KC_V;
+        case KC_W: return KC_H;
+        case KC_G: return KC_H;
+        case KC_P: return KC_H;
+        case KC_Q: return KC_U;
+
+        // i + Magic -> "is". Best remaining buy on the board: ratio 1.27,
+        // which is the same price paid six times over for the vertical combos,
+        // and 100% of the relief lands on the LEFT PINKY (s is pinky home),
+        // cutting it from 7.19 to 6.78 presses per 100 characters. Stable in
+        // all three languages -- EN 1.40 / ES 1.10 / CA 1.15.
+        // Chosen over i -> n, which has twice the raw relief (-0.82 vs -0.40)
+        // but spends it on the left MIDDLE finger. Pinky relief is the currency
+        // this keymap has been buying all along.
+        case KC_I: return KC_S;
+
+        // e + Magic -> "es". The largest single relief available anywhere:
+        // -1.81 left-hand presses per 100 characters, ALL of it left pinky --
+        // roughly a quarter of the entire left-pinky load, 4.4x more than any
+        // other rule on the board.
+        //
+        // Its ratio is 3.87, far past the 1.3 the rest of the table is held to,
+        // and that is not hidden here because it is real. But ~90% of that cost
+        // is one constant: c(e, MAGIC) = LSB-mild, the right middle-to-index-
+        // inner lateral reach, which model3.py's own header calls "the knob".
+        // Across the range that file tests, this rule scores anywhere from 1.2
+        // (best on the board) to 6.5 (worst). The model cannot settle it; only
+        // the hand can. Adopted deliberately, with the pinky load as the reason.
+        case KC_E: return KC_S;
+    }
+    return KC_NO;
+}
+
+// Two-letter completions. These emit a cluster rather than a single letter, so
+// they need their own table -- hd_magic_completion() is single-keycode by
+// contract, and its result is also what gets pushed as the next history key.
+//
+// Only "sta" earns a slot. Measured end-to-end it is an outright free lunch:
+// dMot -0.31 AND dLeft -0.31 (ratio -0.98), stable across EN -0.89 / ES -1.00 /
+// CA -0.99, and P(t|s) ranks 2nd-3rd of every continuation of s. Emitting the
+// 'a' inside the cluster is also what dodges the Magic-then-a same-finger
+// collision that ruins the single-letter s -> t rule (both are right index).
+//
+// Honest caveat: the keystroke it removes is left INDEX home, the strongest and
+// cheapest key on that hand. This is volume relief, not strain relief.
+static bool hd_magic_completion2(uint16_t trigger, uint16_t *first, uint16_t *second) {
+    switch (trigger) {
+        case KC_S: *first = KC_T; *second = KC_A; return true;   // s + Magic -> "sta"
+    }
+    return false;
+}
+
+// Second-step completions. Pressing Magic twice on the same trigger replaces
+// the first completion with a second one. Like the Arcane accent cycle this is
+// timer-free: the only way to reach step 2 is another Magic press, so it can
+// never stall waiting for a tap and can never fire on its own.
+//
+// Only n uses it so far: n + Magic -> "ng", n + Magic + Magic -> "n't". It is
+// worth a step here because the alternative spelling of n't needs the right
+// pinky TOP row plus a left-index t, while step 2 is one more press of a key
+// the finger is already on. It is NOT worth doing for ordinary letters, where
+// pressing the letter directly always beats a Magic press plus a backspace.
+
+static bool hd_do_base_magic(void) {
+    bool used_pending = false;
+    uint16_t trigger = hd_magic_get_trigger(&used_pending);
+    if (trigger == KC_NO) {
         return false;
     }
 
-    // Tiny briefs. These are intentionally small and non-editor-specific.
-    switch (trigger) {
-        case KC_I:
-            // i + Magic -> I.
-            tap_code(KC_BSPC);
-            tap_code16(S(KC_I));
-            hd_magic_push(KC_I);
-            hd_repeat_remember(S(KC_I));
-            return true;
-        case KC_N:
-            hd_send_string_unshifted("'t");      // n + Magic -> n't
-            hd_magic_push(KC_T);
-            hd_repeat_remember(KC_T);
-            return true;
-        case KC_H:
-            hd_send_string_unshifted("ave");     // h + Magic -> have
-            hd_magic_push(KC_E);
-            hd_repeat_remember(KC_E);
-            return true;
+    if (hd_magic_cycle_key == KC_N && trigger == KC_G) {
+        hd_tap_bspc_unmodded();                        // erase the g of "ng"
+        hd_send_string_unshifted("'t");           // n + Magic + Magic -> n't
+        hd_magic_push(KC_T);
+        hd_repeat_remember(KC_T);
+        return true;
+    }
+
+    // Past this point a completion has NOT been armed for step 2, so a second
+    // Magic would re-enter with the completion itself as the trigger --
+    // hd_magic_send() pushes what it emitted as the new history key. Several
+    // completions are themselves triggers, which produced silent nonsense:
+    // m + Magic + Magic -> "mph" (m->p, then p->h), x + Magic + Magic -> "xph",
+    // and worst, c + Magic + Magic -> "cq", because the emitted k hit the
+    // replacement-style k->q rule and ATE a character that was already correct.
+    // n't is checked above precisely because it is the one real step-2 rule.
+    // hd_magic_cycle_key is cleared by hd_magic_push() on any ordinary
+    // keystroke, so this only ever fires on a genuine back-to-back Magic.
+    if (hd_magic_cycle_key != KC_NO) {
+        return false;
+    }
+
+    if (hd_magic_word_brief(trigger, used_pending)) {
+        return true;
+    }
+
+    // k + Magic -> q keeps q off the symbol layer. It is replacement-style,
+    // so it has to run before the append-style completions.
+    if (trigger == KC_K) {
+        return hd_magic_replace_with_key(hd_magic_trigger_shifted(used_pending) ? S(KC_Q) : KC_Q, KC_Q, used_pending);
+    }
+
+    // Two-letter completions run before the single-letter table; nothing is
+    // armed for step 2 afterwards, so a following Magic is inert.
+    uint16_t c2_first, c2_second;
+    if (hd_magic_completion2(trigger, &c2_first, &c2_second)) {
+        hd_magic_send2(c2_first, c2_second);
+        if (used_pending) {
+            hd_magic_consume_pending();
+        }
+        return true;
+    }
+
+    // Letter completions are append-style, so the pending and settled paths are
+    // identical: send only the completion. Sending the whole digraph would turn
+    // a fast t + Magic into "tts".
+    uint16_t completion = hd_magic_completion(trigger);
+    if (completion != KC_NO) {
+        hd_magic_send(completion);            // this clears hd_magic_cycle_key
+        hd_magic_cycle_key = trigger;         // ...so arm step 2 afterwards
+        if (used_pending) {
+            hd_magic_consume_pending();
+        }
+        return true;
     }
 
     // Code / punctuation Magic.
@@ -955,31 +1115,9 @@ static bool hd_do_base_magic(void) {
             hd_magic_push(S(KC_RBRC));
             hd_repeat_remember(S(KC_RBRC));
             return true;
-        case KC_SPC:
-            hd_send_string_unshifted("the");                // minimal brief: Space + Magic -> the
-            hd_magic_push(KC_E);
-            hd_repeat_remember(KC_E);
-            return true;
     }
 
     return false;
-}
-
-static bool hd_do_skip_magic(void) {
-    if (boring_mode || calm_mode) {
-        return false;
-    }
-
-    switch (hd_magic_prev) {
-        case KC_O: return hd_magic_send(KC_E);
-        case KC_I: return hd_magic_send(KC_Y);
-        case KC_N: return hd_magic_send(KC_L);
-        case KC_T: return hd_magic_send(KC_D);
-        case KC_C: return hd_magic_send(KC_P);
-    }
-
-    // Skip Repeat fallback: key1 key2 SkipMagic -> key1 key2 key1.
-    return hd_magic_send(hd_magic_prev);
 }
 
 // -----------------------------------------------------------------------------
@@ -1006,69 +1144,57 @@ uint16_t get_alt_repeat_key_keycode_user(uint16_t keycode, uint8_t mods) {
 
 bool remember_last_key_user(uint16_t keycode, keyrecord_t *record, uint8_t *remembered_mods) {
     switch (keycode) {
-        case BORING:
-        case CALM:
-        case OS_MODE:
         case REP_NAV:
         case HD_MAGIC:
-        case HD_SKIP_MAGIC:
-        case QK_LLCK:
+        case HD_ARCANE:
         case QK_BOOT:
             return false;
     }
     return true;
 }
 
-static bool hd_rep_nav_repeat_sent = false;
-
 // -----------------------------------------------------------------------------
 // Main key processing
 // -----------------------------------------------------------------------------
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    // Every custom keycode below returns false, which skips
+    // process_record_handler -- and that is also where QMK retires a one-shot
+    // layer once another key is pressed. Retire it here instead, or a tapped
+    // Lang stays armed through the character it was meant to produce and the
+    // next keystroke comes off the wrong layer. The call is idempotent and
+    // does nothing when no one-shot layer is active, so the range check only
+    // needs to exclude OSL itself.
+    if (record->event.pressed && keycode >= SAFE_RANGE && keycode < XC_LAST) {
+        clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED);
+    }
+
     switch (keycode) {
-        case BORING:
-            if (record->event.pressed) {
-                boring_mode = !boring_mode;
-                hd_magic_clear_history();
-            }
-            return false;
-
-        case CALM:
-            if (record->event.pressed) {
-                calm_mode = !calm_mode;
-                hd_magic_clear_history();
-            }
-            return false;
-
-        case OS_MODE:
-            if (record->event.pressed) {
-                os_windows_mode = !os_windows_mode;
-            }
-            return false;
-
         case REP_NAV:
-            // REP_NAV = LT(_NAV, KC_F24). Let QMK handle the hold side normally.
-            // Some QMK paths expose the tap as REP_NAV on release; others expose
-            // the tap key KC_F24. Handle both, guarded against double-repeat.
-            if (record->event.pressed) {
-                hd_rep_nav_repeat_sent = false;
-                return true;
-            }
-            if (record->tap.count && !hd_rep_nav_repeat_sent) {
-                hd_do_repeat();
-                hd_rep_nav_repeat_sent = true;
+            // REP_NAV = LT(_NAV, KC_F24). The tap side must never reach QMK.
+            // Returning true on the press let process_action register KC_F24 --
+            // a real basic keycode, so it entered the HID report -- and the
+            // release then returned false, skipping the matching
+            // unregister_code. F24 stayed latched FOREVER, after every single
+            // Repeat tap, permanently burning one of six boot-protocol rollover
+            // slots (there is no NKRO here) and putting a phantom key in every
+            // later report.
+            //
+            // The old `case KC_F24:` arm below this was dead code:
+            // process_record_quantum resolves the keycode with
+            // get_record_keycode(), which only yields the tap keycode for
+            // combo- and repeat-synthesised records, never a matrix event. So
+            // process_record_user always saw REP_NAV, and the
+            // hd_rep_nav_repeat_sent double-fire guard guarded nothing.
+            //
+            // Hold side still returns true, because QMK drives layer_on/off.
+            if (record->tap.count) {
+                if (record->event.pressed) {
+                    hd_do_repeat();
+                }
                 return false;
             }
             return true;
-
-        case KC_F24:
-            // Dummy tap side of REP_NAV. Never send F24 to the host.
-            if (record->event.pressed && !hd_rep_nav_repeat_sent) {
-                hd_do_repeat();
-                hd_rep_nav_repeat_sent = true;
-            }
-            return false;
 
         case HD_MAGIC:
             if (record->event.pressed) {
@@ -1076,9 +1202,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 
-        case HD_SKIP_MAGIC:
+        case HD_ARCANE:
             if (record->event.pressed) {
-                hd_do_skip_magic();
+                hd_do_arcane();
+            }
+            return false;
+
+        // Language layer. These emit a character outright rather than
+        // replacing a trigger, so unlike Arcane there is no backspace.
+        case XC_AACU ... XC_MDOT:
+            if (record->event.pressed) {
+                hd_compose_send(HD_SEQ(keycode), hd_shifted() || is_caps_word_on());
             }
             return false;
 
@@ -1102,24 +1236,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 
-        case HD_TH:
-            if (record->event.pressed) { send_hd_digraph(KC_T, KC_H); hd_magic_push(KC_H); hd_repeat_remember(KC_H); }
-            return false;
-        case HD_CH:
-            if (record->event.pressed) { send_hd_digraph(KC_C, KC_H); hd_magic_push(KC_H); hd_repeat_remember(KC_H); }
-            return false;
-        case HD_SH:
-            if (record->event.pressed) { send_hd_digraph(KC_S, KC_H); hd_magic_push(KC_H); hd_repeat_remember(KC_H); }
-            return false;
-        case HD_WH:
-            if (record->event.pressed) { send_hd_digraph(KC_W, KC_H); hd_magic_push(KC_H); hd_repeat_remember(KC_H); }
-            return false;
-        case HD_GH:
-            if (record->event.pressed) { send_hd_digraph(KC_G, KC_H); hd_magic_push(KC_H); hd_repeat_remember(KC_H); }
-            return false;
-        case HD_PH:
-            if (record->event.pressed) { send_hd_digraph(KC_P, KC_H); hd_magic_push(KC_H); hd_repeat_remember(KC_H); }
-            return false;
         case KC_ESC:
         case KC_ENT:
             if (record->event.pressed) {
@@ -1127,17 +1243,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             break;
 
-        case P_DOT_COLN:
-            if (record->event.pressed) {
-                uint16_t out = hd_shifted() ? S(KC_SCLN) : KC_DOT;
-                tap_code16_without_user_shift(out);
-                hd_magic_push(hd_shifted() ? S(KC_SCLN) : KC_DOT);
-                hd_repeat_remember(out);
-            }
-            return false;
-
         case P_DOT_SLSH:
             if (record->event.pressed) {
+                // Punctuation ends Caps Word. QMK's default
+                // caps_word_press_user() would do that, but this key returns
+                // false and so never reaches process_caps_word -- Caps Word
+                // stayed stuck on past the end of the word, with no idle
+                // timeout configured to rescue it.
+                caps_word_off();
                 uint16_t out = hd_shifted() ? KC_SLSH : KC_DOT;
                 tap_code16_without_user_shift(out);
                 hd_magic_push(hd_shifted() ? KC_SLSH : KC_DOT);
@@ -1145,17 +1258,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 
-        case P_COMM_SCLN:
-            if (record->event.pressed) {
-                uint16_t out = hd_shifted() ? KC_SCLN : KC_COMM;
-                tap_code16_without_user_shift(out);
-                hd_magic_push(hd_shifted() ? KC_SCLN : KC_COMM);
-                hd_repeat_remember(out);
-            }
-            return false;
-
         case P_COMM_QUES:
             if (record->event.pressed) {
+                // Punctuation ends Caps Word. QMK's default
+                // caps_word_press_user() would do that, but this key returns
+                // false and so never reaches process_caps_word -- Caps Word
+                // stayed stuck on past the end of the word, with no idle
+                // timeout configured to rescue it.
+                caps_word_off();
                 uint16_t out = hd_shifted() ? S(KC_SLSH) : KC_COMM;
                 tap_code16_without_user_shift(out);
                 hd_magic_push(hd_shifted() ? S(KC_SLSH) : KC_COMM);
@@ -1163,26 +1273,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 
-        case P_MINS_PLUS:
-            if (record->event.pressed) {
-                uint16_t out = hd_shifted() ? S(KC_EQL) : KC_MINS;
-                tap_code16_without_user_shift(out);
-                hd_magic_push(hd_shifted() ? S(KC_EQL) : KC_MINS);
-                hd_repeat_remember(out);
-            }
-            return false;
-
-        case P_SLSH_QUES:
-            if (record->event.pressed) {
-                uint16_t out = hd_shifted() ? S(KC_SLSH) : KC_SLSH;
-                tap_code16_without_user_shift(out);
-                hd_magic_push(hd_shifted() ? S(KC_SLSH) : KC_SLSH);
-                hd_repeat_remember(out);
-            }
-            return false;
-
         case P_QUOT_DQUO:
             if (record->event.pressed) {
+                // Punctuation ends Caps Word. QMK's default
+                // caps_word_press_user() would do that, but this key returns
+                // false and so never reaches process_caps_word -- Caps Word
+                // stayed stuck on past the end of the word, with no idle
+                // timeout configured to rescue it.
+                caps_word_off();
                 uint16_t out = hd_shifted() ? S(KC_QUOT) : KC_QUOT;
                 tap_code16_without_user_shift(out);
                 hd_magic_push(hd_shifted() ? S(KC_QUOT) : KC_QUOT);
@@ -1191,7 +1289,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
     }
 
-    // Track normal taps for Magic / SkipMagic and private Repeat
+    // Track normal taps for Magic / Arcane and private Repeat
     if (record->event.pressed) {
         uint16_t hist = hd_normalize_history_key(keycode);
 
@@ -1200,15 +1298,32 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         switch (keycode) {
             case HRM_S: case HRM_C: case HRM_N: case HRM_T:
             case HRM_A: case HRM_E: case HRM_I: case HRM_H:
-            case R_NUM: case D_NAV: case V_SYM: case L_NUM:
-            case O_NAV: case U_SYM: case Y_NUM: case SPC_SYM:
-                if (hist != KC_NO) {
+            case R_NUM: case O_NUM: case SPC_SYM:
+                // Only a TAP may arm a trigger. QMK delivers the press record
+                // once the tap-hold has resolved, with tap.count == 0 for a
+                // hold (quantum/action_tapping.c) -- and without this test a
+                // key merely HELD as a modifier or layer armed its tap letter.
+                // Holding SPC_SYM to type "->" then pressing Magic injected the
+                // word "the"; holding HRM_A as Shift then pressing Arcane
+                // backspaced the letter just typed and replaced it with a
+                // lowercase accent. A hold must also actively clear any pending
+                // it displaced, or the stale one survives its full 220 ms.
+                if (hist != KC_NO && record->tap.count > 0) {
                     hd_magic_set_pending(hist);
                     hd_repeat_set_pending(hist);
+                } else {
+                    hd_magic_forget_pending();
                 }
                 break; // tap-hold keys are handled on release if tapped.
             default:
                 if (hist != KC_NO) {
+                    // A settled plain key supersedes any pending tap-hold
+                    // trigger. hd_magic_get_trigger() prefers pending
+                    // unconditionally, so without this the letter you actually
+                    // typed last stayed invisible to Magic for 220 ms: "e x
+                    // Magic" gave "exs" instead of "exp", because the stale e
+                    // won. Reproduces around 75-80 wpm.
+                    hd_magic_forget_pending();
                     hd_magic_push(hist);
                 }
                 if (rep != KC_NO) {
@@ -1220,10 +1335,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     } else {
         if (record->tap.count > 0) {
             uint16_t hist = hd_normalize_history_key(keycode);
-            if (hist != KC_NO) {
-                if (hd_should_suppress_consumed_pending(keycode)) {
-                    return false;
-                }
+            // Skip the bookkeeping when a completion already consumed this key,
+            // but do NOT swallow the event. Returning false here skipped
+            // process_record_handler, which is where QMK retires the tap
+            // (quantum/action.c) -- so the tapped letter was registered and
+            // never unregistered, staying latched in the HID report. The next
+            // press of that letter then produced no transition and was silently
+            // eaten, and one of six boot-protocol rollover slots was gone.
+            // The character itself was already emitted on the press, so there
+            // was never anything here worth suppressing except the duplicate
+            // push and remember.
+            if (hist != KC_NO && !hd_should_suppress_consumed_pending(keycode)) {
                 hd_magic_push(hist);
                 hd_repeat_remember(hist);
             }
@@ -1232,28 +1354,39 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
     return true;
 }
+// Only _BASE and _SYM carry ASCII art below; open layers.html in this folder
+// for a drawn diagram of all eight layers, in physical column order.
+//
+// Reading the arrays: rows 0 and 1 run  L[pinky ring mid index inner extra]
+// then R[extra inner index mid ring pinky];  row 2 drops the extra keys;
+// thumbs run L[outer mid inner] then R[inner mid outer]. The right half is
+// stored innermost-first, so its last entry is the right pinky.
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     /*
      * Layer 0 — Vibranium-f + Vim/terminal-oriented base
      *
+     *   X W M G J   ||   Enter   Esc    ./     ,?    '"
+     *   S C N T K   ||   Magic    A      E      I     H
+     *   F P L D V   ||     R      U    O/Num    Y     B
      *
-     * X W M G J | Lang      ||    Enter Esc ./ ,? '" Tab
-     * S C N T K | Sys       ||    Sys Magic A E I H
-     * F P L/Num D/Nav V/Sym ||    SkipMagic U/Sym O/Nav Y/Num B
-     * CapsWord Boring R/Num ||    Repeat/Nav  Space/Sym  Backspace
-     * Smart behavior:
-     * - JG -> Z
-     * - TK -> QU
-     * - Hold TK long enough -> Q
-     * - TN/CN/SC/WM/GM/FP -> TH/CH/SH/WH/GH/PH
+     *   extra cols   Lang / Sys        ||   Tab / Sys
+     *   thumbs       CapsWord Arcane R/Num  ||  Repeat/Nav Space/Sym Bspc
+     *
+     * Chords:
+     * - JG -> Z,  TK -> Q  (q + Magic -> qu)
+     * - right-hand same-finger vertical combos -> alternate homes for the
+     *   costly left-hand letters:
+     *       Esc+A -> X     A+U -> F
+     *       ./+E  -> K     E+O -> V
+     *       ,?+I  -> J     I+Y -> S
      */
     [_BASE] = LAYOUT_split_3x5_3_ex2(
 
-        KC_X,    KC_W,    KC_M,    KC_G,    KC_J,    LANG,       KC_TAB,  KC_ENT,         KC_ESC,   P_DOT_SLSH,  P_COMM_QUES, P_QUOT_DQUO,
-        HRM_S,   HRM_C,   HRM_N,   HRM_T,   KC_K,    SYS,        SYS,     HD_MAGIC,       HRM_A,    HRM_E,       HRM_I,       HRM_H,
-        KC_F,    KC_P,    L_NUM,   D_NAV,   V_SYM,                        /*HD_SKIP_MAGIC*/ KC_R,  U_SYM,    O_NAV,       Y_NUM,       KC_B,
-                                   CW_TOGG, BORING, R_NUM,        REP_NAV, SPC_SYM, KC_BSPC
+        KC_X,    KC_W,    KC_M,    KC_G,    KC_J,    LANG,       KC_TAB,  KC_ENT,    KC_ESC,   P_DOT_SLSH,  P_COMM_QUES, P_QUOT_DQUO,
+        HRM_S,   HRM_C,   HRM_N,   HRM_T,   KC_K,    SYS,        SYS,     HD_MAGIC,  HRM_A,    HRM_E,       HRM_I,       HRM_H,
+        KC_F,    KC_P,    KC_L,    KC_D,    KC_V,                         KC_R,      KC_U,     O_NUM,       KC_Y,        KC_B,
+                                   CW_TOGG, HD_ARCANE, R_NUM,    REP_NAV, SPC_SYM, KC_BSPC
     ),
 
     /*
@@ -1263,23 +1396,26 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         UNDO,    CUT,     COPY,    PASTE,   SAVE,    _______,     _______, KC_PGUP, KC_HOME, KC_UP,   KC_END,  KC_DEL,
         KC_LALT, KC_LCTL, KC_LGUI,  KC_LSFT, KC_TAB,  _______,     _______, KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, KC_BSPC,
         FIND,    S_TAB,   PREVT,   NEXTT,   ALT_TAB,                         KC_INS,  WORD_L,  WORD_R,  C_BSPC,  C_DEL,
-                                    _______, QK_LLCK, QK_LLCK,   QK_AREP, QK_LLCK, _______
+                                    _______, _______, _______,   QK_AREP, _______, _______
     ),
 
     /*
-     * Layer 2 — Symbols
+     * Layer 2 — Symbols          (hold Space, right middle thumb)
      *
-     * !   @   #   $   %      _____     _____     XXXXX  q  |   \   z
-     * ^   &   *   +   =      _____     _____     XXXXX  (  {   [   <
-     * ~   -   _   :   ;                          `      )  }   ]   >
+     *   ! @ # $ %   ||   XXXX   q    |    \    z
+     *   ^ & * + =   ||     -    (    {    [    <
+     *   ~ - _ : ;   ||     `    )    }    ]    >
      *
-     *            _____ _____ Num        _____ _____ _____
+     *   extra cols and all six thumbs: transparent
+     *
+     * Brackets are stacked in pairs: open on the home row, close directly
+     * below it.  q and z are the slow path -- T+K and J+G are the fast one.
      */
     [_SYM] = LAYOUT_split_3x5_3_ex2(
         S(KC_1),   S(KC_2),   S(KC_3),   S(KC_4),   S(KC_5),   _______,     _______, XXXXXXX,    KC_Q,    S(KC_BSLS), KC_BSLS,    KC_Z,
         S(KC_6),   S(KC_7),   S(KC_8),   S(KC_EQL), KC_EQL,    _______,     _______, KC_MINS,    S(KC_9),    S(KC_LBRC), KC_LBRC,    S(KC_COMM),
         S(KC_GRV), KC_MINS,   S(KC_MINS), S(KC_SCLN), KC_SCLN,                       KC_GRV,     S(KC_0),    S(KC_RBRC), KC_RBRC,    S(KC_DOT),
-                                          _______, QK_LLCK, QK_LLCK,                      QK_LLCK, QK_LLCK, _______
+                                          _______, _______, _______,                      _______, _______, _______
     ),
 
     /*
@@ -1288,19 +1424,26 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_NUM] = LAYOUT_split_3x5_3_ex2(
         KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   _______,     _______, KC_SLSH, KC_7,    KC_8,    KC_9,    KC_MINS,
         KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,     _______, S(KC_8), KC_4,    KC_5,    KC_6,    S(KC_EQL),
-        KC_F11,  KC_F12,  KC_0,  KC_DOT,  KC_EQL,                            KC_DOT, KC_1,    KC_2,    KC_3,    KC_0,
-                                      _______, QK_LLCK, QK_LLCK,     QK_LLCK, QK_LLCK, _______
+        KC_F11,  KC_F12,  KC_F13,  KC_F14,  KC_F15,                          KC_DOT, KC_1,    KC_2,    KC_3,    KC_0,
+                                      _______, _______, _______,     _______, _______, _______
     ),
 
     /*
-     * Layer 4 — Language / Unicode
+     * Layer 4 — Language / Compose
+     *
+     *   —  —  ñ  ç  ß   ||   á  é  í  ó  ú
+     *   —  —  ¿  ·  €   ||   à  è  ì  ò  ù
+     *   —  —  ¡  —  —   ||   ä  ë  ï  ö  ü
+     *
+     * Shift gives the capital where one exists. Everything here is a
+     * duplicate of what Arcane already reaches from the home row; the layer
+     * is the explicit fallback for when you want a character without having
+     * just typed its base letter.
      */
     [_LANG] = LAYOUT_split_3x5_3_ex2(
-        _______, _______, UP(U_ENYE, U_ENYE_CAP), UP(U_CCED, U_CCED_CAP), UP(U_ESZ, U_ESZ_CAP), _______,           _______, UP(U_AACU, U_AACU_CAP), UP(U_EACU, U_EACU_CAP), UP(U_IACU, U_IACU_CAP), UP(U_OACU, U_OACU_CAP), UP(U_UACU, U_UACU_CAP),
-
-        _______, _______, UM(U_IQUE), UM(U_MDOT), UM(U_EURO), _______,                                             _______, UP(U_AGRV, U_AGRV_CAP), UP(U_EGRV, U_EGRV_CAP), UP(U_IGRV, U_IGRV_CAP), UP(U_OGRV, U_OGRV_CAP), UP(U_UGRV, U_UGRV_CAP),
-
-        _______, _______, UM(U_IEXC), _______, _______,                                                                     UP(U_AUML, U_AUML_CAP), UP(U_EUML, U_EUML_CAP), UP(U_IUML, U_IUML_CAP), UP(U_OUML, U_OUML_CAP), UP(U_UUML, U_UUML_CAP),
+        _______, _______, XC_ENYE, XC_CCED, XC_ESZ,  _______,     _______, XC_AACU, XC_EACU, XC_IACU, XC_OACU, XC_UACU,
+        _______, _______, XC_IQUE, XC_MDOT, XC_EURO, _______,     _______, XC_AGRV, XC_EGRV, XC_IGRV, XC_OGRV, XC_UGRV,
+        _______, _______, XC_IEXC, _______, _______,                       XC_AUML, XC_EUML, XC_IUML, XC_OUML, XC_UUML,
                                       _______, _______, _______,     _______, _______, _______
     ),
 
@@ -1308,9 +1451,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      * Layer 5 — System
      */
     [_SYS] = LAYOUT_split_3x5_3_ex2(
-        UC_LINX, UC_WIN,  VIBRA,   QWERTY,  MOUSE_TG, QK_BOOT,    QK_BOOT, KC_PSCR, KC_SCRL, KC_PAUS, XXXXXXX, XXXXXXX,
+        XXXXXXX, XXXXXXX, VIBRA,   QWERTY,  MOUSE_TG, QK_BOOT,    QK_BOOT, KC_PSCR, KC_SCRL, KC_PAUS, XXXXXXX, XXXXXXX,
         KC_MUTE, KC_VOLD, KC_VOLU, KC_BRID, KC_BRIU, _______,     _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MSTP, XXXXXXX,
-        CM_TOGG, CALM,    OS_MODE, KC_NUM,  KC_APP,                         SH_TOGG, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        CM_TOGG, XXXXXXX, XXXXXXX, KC_NUM,  COMPOSE,                        SH_TOGG, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
                                       _______, _______, _______,     _______, _______, _______
     ),
 
@@ -1321,7 +1464,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, _______, _______, MOUSE_TG, _______,      _______, MS_WHLL, MS_WHLU, MS_WHLR, _______, _______,
         _______, _______, _______, _______, _______, _______,      _______, MS_LEFT, MS_DOWN, MS_UP,   MS_RGHT, MS_BTN2,
         _______, _______, _______, _______, _______,               _______, MS_BTN1, MS_WHLD, MS_BTN3, _______,
-                                      _______, QK_LLCK, _______,  _______, _______, _______
+                                      _______, _______, _______,  _______, _______, _______
     ),
     /*
      * Layer 7 — QWERTY rescue
